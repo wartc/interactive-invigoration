@@ -11,9 +11,14 @@
 
 class Shader {
  public:
-  unsigned int ID;
+  unsigned int ID{};
 
-  Shader(const char *vertexPath, const char *fragmentPath) {
+  Shader() {}
+
+  Shader(const char *vertexPath, const char *fragmentPath) { loadShader(vertexPath, fragmentPath); }
+
+  // load the shaders
+  void loadShader(const char *vertexPath, const char *fragmentPath) {
     std::string vertexCode;
     std::string fragmentCode;
     std::ifstream vShaderFile;

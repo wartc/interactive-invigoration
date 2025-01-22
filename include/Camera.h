@@ -31,7 +31,11 @@ class Camera {
   float pitch{0.0f};  // vertical rotation
 
  public:
-  Camera(const glm::vec3& position, const glm::vec3& target) : pos{position} {
+  Camera(
+      const glm::vec3& position = glm::vec3{0.0f, 0.0f, 0.0f},
+      const glm::vec3& target = glm::vec3{0.0f, 0.0f, 0.0f}
+  )
+      : pos{position} {
     front = glm::normalize(target - position);
     updateVectors();
   }

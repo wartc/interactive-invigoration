@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "Camera.h"
+#include "PlantGraph.h"
 #include "Spline.h"
 
 constexpr float ASPECT_RATIO = 16.0f / 9.0f;
@@ -15,7 +16,7 @@ bool g_rotatingCamera = false;
 bool g_panningCamera = false;
 
 // camera controls
-Camera camera({0.0f, 0.0f, 3.0f}, {0.0f, 0.0f, 0.0f});
+Camera camera({0.0f, 2.0f, 3.0f}, {0.0f, 3.0f, -1.0f});
 
 bool g_firstMouse = true;
 double g_lastX = 0.0, g_lastY = 0.0;
@@ -83,11 +84,17 @@ GLFWwindow* initWindow() {
 int main(int argc, char** argv) {
   GLFWwindow* window = initWindow();
 
-  Spline sp({
-      {-2.0f, -0.8f, 0.0f},
-      { 0.0f,  0.7f, 0.0f},
-      { 0.9f,  0.2f, 0.0f}
-  });
+  PlantGraph pg({0.0f, 0.0f, 0.0f});
+  std::vector<Spline> splines;
+
+  int id1 = pg.addNode({0.0f, 2.0f, 0.0f}, 0);
+  int id2 = pg.addNode({-0.5f, 2.8f, 0.4f}, id1);
+  int id3 = pg.addNode({0.9f, 3.3f, -0.4f}, id1);
+  int id4 = pg.addNode({0.6f, 3.8f, -0.4f}, id3);
+  int id5 = pg.addNode({1.0f, 3.8f, 0.4f}, id3);
+  int id6 = pg.addNode({0.8f, 4.2f, -0.6f}, id3);
+
+  pg.traverse(0, [&](Node n) { splines.push_back(Spline({pg.getNode(n.parentId).pos, n.pos})); });
 
   Shader sh(
       "/home/guerra/dev/graphics/projects/interactive-invigoration/shaders/basic.vert",
@@ -113,7 +120,7 @@ int main(int argc, char** argv) {
     sh.setMat4("view", camera.getViewMatrix());
     sh.setMat4("model", glm::mat4(1.0f));
 
-    sp.draw();
+    for (auto sp : splines) sp.draw(sh);
 
     // glfw processes
     glfwSwapBuffers(window);

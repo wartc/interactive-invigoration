@@ -17,7 +17,8 @@ class Spline {
  public:
   Spline(const std::vector<glm::vec3>& points_) : points{points_} { init(); }
 
-  void draw() {
+  void draw(Shader& shader) {
+    shader.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
     glBindVertexArray(VAO);
     glDrawElements(GL_LINES, indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
