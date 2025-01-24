@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "PlantGraph.h"
 #include "Spline.h"
+#include "Tree.h"
 
 constexpr float ASPECT_RATIO = 16.0f / 9.0f;
 constexpr unsigned int WINDOW_WIDTH = 1920, WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
@@ -75,6 +76,8 @@ GLFWwindow* initWindow() {
   glEnable(GL_LINE_SMOOTH);
   glLineWidth(5);
 
+  glPointSize(5);
+
   // GLfloat lineWidthRange[2] = {0.0f, 0.0f};
   // glGetFloatv(GL_ALIASED_LINE_WIDTH_RANGE, lineWidthRange);
 
@@ -85,16 +88,21 @@ int main(int argc, char** argv) {
   GLFWwindow* window = initWindow();
 
   PlantGraph pg({0.0f, 0.0f, 0.0f});
-  std::vector<Spline> splines;
 
   int id1 = pg.addNode({0.0f, 2.0f, 0.0f}, 0);
   int id2 = pg.addNode({-0.5f, 2.8f, 0.4f}, id1);
   int id3 = pg.addNode({0.9f, 3.3f, -0.4f}, id1);
-  int id4 = pg.addNode({0.6f, 3.8f, -0.4f}, id3);
-  int id5 = pg.addNode({1.0f, 3.8f, 0.4f}, id3);
-  int id6 = pg.addNode({0.8f, 4.2f, -0.6f}, id3);
+  int id4 = pg.addNode({1.0f, 3.8f, 0.4f}, id3);
+  int id5 = pg.addNode({0.8f, 4.2f, -0.6f}, id3);
 
-  pg.traverse(0, [&](Node n) { splines.push_back(Spline({pg.getNode(n.parentId).pos, n.pos})); });
+  // pg.printGraph();
+
+  Tree t(pg);
+
+  t.computeStrandsInTree();
+  t.printNodeStrands();
+
+  std::vector<Spline> splines = t.generateSplines();
 
   Shader sh(
       "/home/guerra/dev/graphics/projects/interactive-invigoration/shaders/basic.vert",
@@ -120,7 +128,11 @@ int main(int argc, char** argv) {
     sh.setMat4("view", camera.getViewMatrix());
     sh.setMat4("model", glm::mat4(1.0f));
 
-    for (auto sp : splines) sp.draw(sh);
+    sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
+    for (auto sp : splines) sp.draw();
+
+    sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
+    t.showStrandsPoints();
 
     // glfw processes
     glfwSwapBuffers(window);

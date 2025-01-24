@@ -1,17 +1,15 @@
 #ifndef __PLANT_GRAPH__H
 #define __PLANT_GRAPH__H
 
-#include <ostream>
-#include <set>
+#include <cassert>
+#include <memory>
 #include <unordered_map>
-#include <unordered_set>
+#include <vector>
 
 #include <glm/glm.hpp>
 
+// TODO: implement auto-id (like in the Strand struct)
 struct Node {
- private:
-  static int ID_COUNT;  // Static counter for unique IDs
-
  public:
   int id;
   int parentId;
@@ -21,66 +19,66 @@ struct Node {
   // float shootFluxSignal;
   // ...
 
-  friend std::ostream& operator<<(std::ostream& os, const Node& node) {
-    os << "Node ID: " << node.id << ", position: (" << node.pos.x << ", " << node.pos.y << ", "
-       << node.pos.z << ")";
-    return os;
-  }
+  inline bool isRoot() const { return parentId == -1; }
 };
 
 struct PlantGraph {
  private:
-  int idCounter;  // unique node ids
+  int idCounter;  // unique node IDs
 
  public:
-  std::unordered_map<int, Node> nodes;           // node properties by id
-  std::unordered_map<int, std::set<int>> graph;  // graph connections
+  std::unordered_map<int, std::unique_ptr<Node>> nodes;  // stored node data
+  std::unordered_map<int, std::vector<int>> adj;         // graphs adjacency list
 
   PlantGraph() : idCounter(0) {}
 
   PlantGraph(const glm::vec3& root) : idCounter(0) { addNode(root); }
 
-  int addNode(const glm::vec3& pos, int parentId = 0) {
+  int addNode(const glm::vec3& pos, int parentId = -1) {
     int id = idCounter++;
 
-    nodes[id] = {id, parentId, pos};
+    // initialize node
+    nodes[id] = std::make_unique<Node>(Node{id, parentId, pos});
+    adj[id] = std::vector<int>();
 
-    // add node to the graph (without neighbors initially)
-    graph[id] = std::set<int>();
-
-    if (graph.find(parentId) != graph.end()) graph[parentId].insert(id);
+    // if it has a parent, link to the parent
+    if (parentId != -1 && adj.find(parentId) != adj.end()) adj[parentId].push_back(id);
 
     return id;
   }
 
+  // add edge between two existing nodes
   void addEdge(int id1, int id2) {
-    // directed graph
-    graph[id1].insert(id2);
-    nodes[id2].parentId = id1;
+    assert(adj.find(id1) != adj.end() && adj.find(id2) != adj.end());
+
+    adj[id1].push_back(id2);
   }
 
-  Node getNode(int id) {
-    if (id < idCounter) return nodes[id];
-    throw;
+  const Node& getNode(int id) const { return *nodes.at(id); }
+
+  void printGraph() const {
+    for (const auto& [id, neighbors] : adj) {
+      std::cout << "Node " << id << " adjecency: ";
+      for (const auto& neighbor : neighbors) {
+        std::cout << nodes.at(neighbor)->id << " ";
+      }
+      std::cout << "\n";
+    }
   }
 
-  void traverse(int start, std::function<void(Node)> fn) {
-    std::unordered_set<int> visited;
+  void traverseDFS(int start, std::function<void(const Node&)> fn) const {
+    std::vector<bool> visited(adj.size(), false);
+
     dfs(start, fn, visited);
   }
 
  private:
-  void dfs(int start, std::function<void(Node)> fn, std::unordered_set<int>& visited) {
-    if (visited.find(start) != visited.end()) {
-      return;
-    }
+  void dfs(int id, std::function<void(const Node&)> fn, std::vector<bool>& visited) const {
+    visited[id] = true;
+    fn(getNode(id));
 
-    visited.insert(start);
-    fn(nodes[start]);
-
-    // explore adjacent nodes
-    for (int adj : graph[start]) {
-      dfs(adj, fn, visited);
+    for (int neighbor : adj.at(id)) {
+      if (!visited[neighbor]) dfs(neighbor, fn, visited);
     }
   }
 };
