@@ -20,7 +20,12 @@ class Spline {
  public:
   Spline() {}
 
-  Spline(const std::vector<glm::vec3>& points_) : points{points_} {
+  explicit Spline(const std::vector<glm::vec3>& points_) : points{points_} {
+    smoothSpline();
+    init();
+  }
+
+  explicit Spline(std::vector<glm::vec3>&& points_) noexcept : points(std::move(points_)) {
     smoothSpline();
     init();
   }

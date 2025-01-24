@@ -8,37 +8,40 @@
 
 #include <glm/glm.hpp>
 
-// TODO: implement auto-id (like in the Strand struct)
 struct Node {
+ private:
+  inline static int ID_COUNTER = 0;
+
  public:
   int id;
   int parentId;
+
   glm::vec3 pos;
   // float diameter;
   // float length;
   // float shootFluxSignal;
   // ...
 
+  explicit Node(int parent, glm::vec3 _pos) : id{ID_COUNTER++}, parentId{parent}, pos{_pos} {}
+
+  static int getNodeCount() { return ID_COUNTER; }
+
   inline bool isRoot() const { return parentId == -1; }
 };
 
 struct PlantGraph {
- private:
-  int idCounter;  // unique node IDs
-
  public:
   std::unordered_map<int, std::unique_ptr<Node>> nodes;  // stored node data
   std::unordered_map<int, std::vector<int>> adj;         // graphs adjacency list
 
-  PlantGraph() : idCounter(0) {}
-
-  PlantGraph(const glm::vec3& root) : idCounter(0) { addNode(root); }
+  PlantGraph(const glm::vec3& root) { addNode(root); }
 
   int addNode(const glm::vec3& pos, int parentId = -1) {
-    int id = idCounter++;
-
     // initialize node
-    nodes[id] = std::make_unique<Node>(Node{id, parentId, pos});
+    auto node = std::make_unique<Node>(parentId, pos);
+    int id = node->id;
+
+    nodes[id] = std::move(node);
     adj[id] = std::vector<int>();
 
     // if it has a parent, link to the parent

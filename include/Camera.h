@@ -18,7 +18,7 @@ class Camera {
   // viewing properties
   float fov{45.0f};
   float aspectRatio{16.0f / 9.0f};
-  float near{0.1f}, far{10.0f};
+  float near{0.1f}, far{15.0f};
 
   // camera properties
   glm::vec3 pos{};

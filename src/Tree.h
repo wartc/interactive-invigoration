@@ -31,7 +31,7 @@ struct Strand {
   explicit Strand(int _id, glm::vec3 _pos) : id{_id}, pos{_pos} {}
   explicit Strand(glm::vec3 _pos) : id{ID_COUNTER++}, pos{_pos} {}
 
-  static int getStrandNumber() { return ID_COUNTER; }
+  static int getStrandCount() { return ID_COUNTER; }
 };
 
 class Tree {
@@ -99,9 +99,9 @@ class Tree {
     }
 
     // strands coming from multiple branches -> merge algorithm
-    // sort the children descendingly according to their amount of strands
+    // sort the children (ascending) according to their amount of strands
     std::sort(children.begin(), children.end(), [&](int a, int b) {
-      return nodeStrands[a].size() < nodeStrands[b].size();
+      return nodeStrands[a].size() > nodeStrands[b].size();
     });
 
     float dlarge = 0.0f;
@@ -112,13 +112,13 @@ class Tree {
       float dsmall = 0.0f;
       for (auto& strand : nodeStrands[child]) {
         // offset (length and direction) to project from origin
-        float offset = dlarge + dsmall;
+        float offset = i != 0 ? dlarge + dsmall : 0;
         glm::vec3 mergedPos = strand.pos + offset * dir;
 
         if (i == 0)
           dlarge = std::max(dlarge, glm::length(mergedPos));
         else
-          dsmall = std::max(dsmall, glm::length(mergedPos));
+          dsmall = std::max(dsmall, glm::length(mergedPos) - dlarge);
 
         nodeStrands[node.id].push_back(Strand(strand.id, mergedPos));
       }
@@ -153,7 +153,7 @@ class Tree {
     std::srand(t);
 
     computeCoordinateSystems();
-    computeStrandsInNode(root);
+    computeStrandsInNode(root);  // compute all strands recursively
   }
 
   void printNodeStrands() const {
@@ -167,12 +167,11 @@ class Tree {
   }
 
   std::vector<Spline> generateSplines() const {
-    int nSplines = Strand::getStrandNumber();
+    int nSplines = Strand::getStrandCount();
     std::vector<Spline> splines;
     std::vector<std::vector<glm::vec3>> allPositions(nSplines);
 
     pg.traverseDFS(0, [&](const Node& n) {
-      std::cout << "node id: " << n.id << std::endl;
       for (const auto& strand : nodeStrands.at(n.id)) {
         allPositions[strand.id].push_back(n.pos + frontplanes.at(n.id) * strand.pos);
       }
