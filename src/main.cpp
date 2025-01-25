@@ -5,6 +5,7 @@
 
 #include "Camera.h"
 #include "PlantGraph.h"
+#include "Shader.h"
 #include "Spline.h"
 #include "Tree.h"
 
@@ -95,12 +96,10 @@ int main(int argc, char** argv) {
   int id4 = pg.addNode({1.0f, 3.8f, 0.4f}, id3);
   int id5 = pg.addNode({0.8f, 4.2f, -0.6f}, id3);
 
-  // pg.printGraph();
-
   Tree t(pg);
 
-  t.computeStrandsInTree();
-  t.printNodeStrands();
+  t.computeStrandsPosition();
+  // t.printNodeStrands();
 
   std::vector<Spline> splines = t.generateSplines();
 

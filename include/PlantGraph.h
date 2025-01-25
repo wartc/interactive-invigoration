@@ -59,16 +59,6 @@ struct PlantGraph {
 
   const Node& getNode(int id) const { return *nodes.at(id); }
 
-  void printGraph() const {
-    for (const auto& [id, neighbors] : adj) {
-      std::cout << "Node " << id << " adjecency: ";
-      for (const auto& neighbor : neighbors) {
-        std::cout << nodes.at(neighbor)->id << " ";
-      }
-      std::cout << "\n";
-    }
-  }
-
   void traverseDFS(int start, std::function<void(const Node&)> fn) const {
     std::vector<bool> visited(adj.size(), false);
 

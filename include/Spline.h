@@ -6,8 +6,6 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-#include "Shader.h"
-
 constexpr float SPLINE_ALPHA = 0.5f;  // centripetal catmull-rom
 constexpr float SPLINE_TENSION = 0.0f;
 

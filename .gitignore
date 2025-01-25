@@ -34,4 +34,6 @@
 # IDE
 .vscode
 
+.cache
+
 build/
