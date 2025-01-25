@@ -9,15 +9,34 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 find_package(glfw3 3.3 REQUIRED)
 find_package(glm CONFIG REQUIRED)
 
-add_subdirectory(dep/glad)
+# external libraries
+add_subdirectory(external/glad)
 
-file (GLOB SOURCES src/*.cpp)
+# source files by directory
+file(GLOB CORE_SOURCES src/core/*.cpp)
+file(GLOB SIMULATION_SOURCES src/simulation/*.cpp)
+file(GLOB GEOMETRY_SOURCES src/geometry/*.cpp)
+file(GLOB MAIN_SOURCE src/main.cpp)
+
+# combine all source files
+set(SOURCES
+    ${CORE_SOURCES}
+    ${SIMULATION_SOURCES}
+    ${GEOMETRY_SOURCES}
+    ${MAIN_SOURCE}
+)
+
+# Include directories
+include_directories(
+    include
+    include/core
+    include/simulation
+    include/geometry
+)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME} glfw glm::glm glad)
-
-target_include_directories(${PROJECT_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 add_custom_command(TARGET ${PROJECT_NAME}
     POST_BUILD

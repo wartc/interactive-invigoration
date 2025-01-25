@@ -3,11 +3,11 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Camera.h"
-#include "PlantGraph.h"
-#include "Shader.h"
-#include "Spline.h"
-#include "Tree.h"
+#include "core/Camera.h"
+#include "core/PlantGraph.h"
+#include "core/Shader.h"
+#include "core/Tree.h"
+#include "geometry/Spline.h"
 
 constexpr float ASPECT_RATIO = 16.0f / 9.0f;
 constexpr unsigned int WINDOW_WIDTH = 1920, WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
