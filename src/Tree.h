@@ -8,7 +8,7 @@
 #include "PlantGraph.h"
 #include "Spline.h"
 
-constexpr int NUM_STRANDS_PER_LEAF = 5;
+constexpr int NUM_STRANDS_PER_LEAF = 10;
 constexpr float STRAND_RADIUS = 0.02f;
 constexpr float NODE_STRAND_AREA_RADIUS = 0.1f;
 constexpr glm::mat3 DEFAULT_COORDINATES{

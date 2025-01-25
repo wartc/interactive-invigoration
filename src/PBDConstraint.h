@@ -20,14 +20,14 @@ class PBDConstraint {
       : type{_type}, stiffness{_stiffness}, points{_points} {}
 
   // correction terms (delta p) for the points (considering the scaling)
-  virtual std::array<glm::vec3, N> computeCorrection() = 0;
+  virtual std::array<glm::vec3, N> computeCorrection() const = 0;
 
-  virtual float evaluate() = 0;
+  virtual float evaluate() const = 0;
 
   void setPoints(const std::array<glm::vec3, N>& _points) { points = _points; }
 
-  bool isSatisfied() {
-    float value = evaluate(points);
+  bool isSatisfied() const {
+    float value = evaluate();
 
     return type == EQUALITY ? (value == 0) : (value >= 0);
   }
@@ -43,14 +43,18 @@ class CollisionConstraint : public PBDConstraint<2> {
   )
       : PBDConstraint<2>(_type, _stiffness, _points), pointRadius{d} {}
 
-  std::array<glm::vec3, 2> computeCorrection() override {
+  std::array<glm::vec3, 2> computeCorrection() const override {
     glm::vec3 u = points[0] - points[1];
     float len = glm::length(u);
+    float k = 1 - std::pow(1 - stiffness, 0.5f);
 
-    return {-(len - pointRadius) * (u / len), (len - pointRadius) * (u / len)};
+    return {
+        (-(len - pointRadius) * (u / len)) * k,  //
+        ((len - pointRadius) * (u / len)) * k    //
+    };
   }
 
-  float evaluate() override { return glm::length(points[0] - points[1]) - pointRadius; }
+  float evaluate() const override { return glm::length(points[0] - points[1]) - pointRadius; }
 };
 
 class CircularProfileConstraint : public PBDConstraint<1> {
@@ -65,14 +69,14 @@ class CircularProfileConstraint : public PBDConstraint<1> {
   )
       : PBDConstraint<1>(_type, _stiffness, _points), radius{_radius}, center{_center} {}
 
-  std::array<glm::vec3, 1> computeCorrection() override {
+  std::array<glm::vec3, 1> computeCorrection() const override {
     glm::vec3 u = center - points[0];
     float len = glm::length(u);
 
-    return {(len - radius) * (u / len)};
+    return {((len - radius) * (u / len)) * stiffness};
   }
 
-  float evaluate() override { return radius - glm::length(center - points[0]); }
+  float evaluate() const override { return radius - glm::length(center - points[0]); }
 };
 
 #endif

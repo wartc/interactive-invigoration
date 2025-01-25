@@ -1,6 +1,6 @@
 #include "PBD.h"
 
-#include <iostream>
+#include <algorithm>
 #include <vector>
 
 #include <glm/geometric.hpp>
@@ -8,8 +8,8 @@
 #include "PBDConstraint.h"
 
 std::vector<glm::vec3> PBD::execute(int iterations) {
-  v.resize(x.size());
-  v.clear();
+  std::fill(v.begin(), v.end(), glm::vec3{0.0f, 0.0f, 0.0f});
+  std::fill(p.begin(), p.end(), glm::vec3{0.0f, 0.0f, 0.0f});
 
   for (int i = 0; i < iterations; ++i) {
     simulate();
@@ -19,31 +19,24 @@ std::vector<glm::vec3> PBD::execute(int iterations) {
 }
 
 void PBD::simulate() {
-  std::vector<glm::vec3> p(x.size());
-
   for (int i = 0; i < x.size(); ++i) {
-    computeExternalForces(i);
-    v[i] += dt * 50;
+    v[i] += computeExternalForces(i);
   }
 
-  dampVelocities();
+  // optionally damp velocities, according to PBD paper (ex.: to maintain rigid body constraints)
+  // not that necessary with the parameters set in this implementation
+  // dampVelocities();
 
   for (int i = 0; i < x.size(); ++i) {
     p[i] = x[i] + dt * v[i];
-    std::cout << "p[" << i << "] = (" << p[i].x << ", " << p[i].y << ", " << p[i].z << ")\n";
   }
 
-  std::vector<CollisionConstraint> mcoll;
-  for (int i = 0; i < p.size(); ++i) {
-    for (int j = 0; j < p.size(); ++j) {
-      if (i == j) continue;
-
+  std::set<std::pair<int, int>> mcoll;
+  for (int i = 0; i < p.size() - 1; ++i) {
+    for (int j = i + 1; j < p.size(); ++j) {
       glm::vec3 u = p[i] - p[j];
       if (glm::dot(u, u) < particleRadius * particleRadius) {
-        mcoll.push_back(CollisionConstraint{
-            PBDConstraint<2>::INEQUALITY, 1.0f, {p[i], p[j]},
-              particleRadius
-        });
+        mcoll.insert(std::make_pair(i, j));
       }
     }
   }
@@ -58,26 +51,37 @@ void PBD::simulate() {
   }
 
   // no need for a more sophisticated velocity update...
+  // velocityUpdate();
 }
 
 glm::vec3 PBD::computeExternalForces(int idx) {
   glm::vec3 force{0.0f};
 
-  // attractors: inversely proportional to distance
+  // attractors: linearly proportional to distance
   for (auto& attractorPos : attractors) {
-    glm::vec3 u = attractorPos - x[idx];
-    float len2 = glm::dot(u, u);
-    std::cout << len2 << std::endl;
-
-    if (len2 == 0) return {0.0f, 0.0f, 0.0f};
-
-    force += K_ATTRACTION * (u / len2);
+    force += GAMMA_ATTRACTION * (attractorPos - x[idx]);
   }
 
   return force;
 }
 
-void PBD::dampVelocities() {}
+void PBD::solve(const std::set<std::pair<int, int>>& mcoll) {
+  // constraint to not let strands leave the branch profile
+  for (int i = 0; i < p.size(); ++i) {
+    boundaryConstraint.setPoints({p[i]});
+    if (!boundaryConstraint.isSatisfied()) {
+      p[i] += boundaryConstraint.computeCorrection()[0];
+    }
+  }
 
-void PBD::solve(const std::vector<CollisionConstraint>& mcoll) {}
+  // collision constraints
+  for (auto& [i, j] : mcoll) {
+    collisionConstraint.setPoints({p[i], p[j]});
+    if (!collisionConstraint.isSatisfied()) {
+      auto correction = collisionConstraint.computeCorrection();
+      p[i] += correction[0];
+      p[j] += correction[1];
+    }
+  }
+}
 

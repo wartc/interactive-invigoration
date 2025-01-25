@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 
 constexpr float SPLINE_ALPHA = 0.5f;  // centripetal catmull-rom
-constexpr float SPLINE_TENSION = 0.0f;
+constexpr float SPLINE_TENSION = 0.4f;
 
 class Spline {
  private:

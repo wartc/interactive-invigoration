@@ -32,29 +32,12 @@ void Tree::computeStrandsInNode(const Node& node) {
     }
   } else {
     // leaf nodes (no outgoing branches)
-    // generate strand positions randomly, without intersections
+    // generate strand positions randomly in a defined radius
     for (int i = 0; i < NUM_STRANDS_PER_LEAF; ++i) {
-      bool validPosition = false;
-      glm::vec3 strandPos;
+      float radius = NODE_STRAND_AREA_RADIUS - STRAND_RADIUS;
+      float theta = static_cast<float>(std::rand()) / RAND_MAX * 2 * M_PI;
 
-      while (!validPosition) {
-        float radius = NODE_STRAND_AREA_RADIUS - STRAND_RADIUS;
-        float theta = static_cast<float>(std::rand()) / RAND_MAX * 2 * M_PI;
-
-        strandPos = {radius * std::cos(theta), radius * std::sin(theta), 0};
-
-        // check if the new position intersects with any previously generated strands
-        validPosition = true;
-        for (int j = 0; j < i; ++j) {
-          Strand previousStrand = nodeStrands[node.id][j];
-          float distance = glm::length(previousStrand.pos - strandPos);
-
-          if (distance < 2 * STRAND_RADIUS) {
-            validPosition = false;
-            break;
-          }
-        }
-      }
+      glm::vec3 strandPos = {radius * std::cos(theta), radius * std::sin(theta), 0};
 
       nodeStrands[node.id].push_back(Strand(strandPos));
     }
@@ -121,17 +104,21 @@ void Tree::computeCoordinateSystems() {
 }
 
 void Tree::applyPBD() {
+  std::vector<glm::vec3> attractors{
+      {0.0f, 0.0f, 0.0f}
+  };
+  PBD pbd(
+      {}, attractors, 0.02, 0.002, STRAND_RADIUS, {0.0f, 0.0f, 0.0f}, 0.5 * NODE_STRAND_AREA_RADIUS
+  );
+
   for (auto& [id, strands] : nodeStrands) {
-    std::vector<glm::vec3> pos(strands.size());
-    std::vector<glm::vec3> attractors{
-        {0.0f, 0.0f, 0.0f}
-    };
+    std::vector<glm::vec3> pos;
 
     for (auto& strand : strands) pos.push_back(strand.pos);
-    PBD pbd(
-        pos, attractors, 0.02, 0.002, STRAND_RADIUS, {0.0f, 0.0f, 0.0f}, 2 * NODE_STRAND_AREA_RADIUS
-    );
-    pos = pbd.execute(1);  // TODO: change to 5 * num strands
+
+    // execute pbd for every node, to "pack" the strands, without intersections
+    pbd.setPoints(pos);
+    pos = pbd.execute(5 * Strand::getStrandCount());
 
     for (int i = 0; i < strands.size(); ++i) strands[i].pos = pos[i];
   }
