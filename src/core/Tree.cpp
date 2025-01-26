@@ -7,38 +7,43 @@
 #include <vector>
 
 #include "simulation/PBD.h"
+#include "Strand.h"
 
 void Tree::computeStrandsPosition() {
-  const Node& root = pg.getNode(0);
-
   time_t t = time(nullptr);
   std::cout << "random seed: " << t << std::endl;
   std::srand(t);
 
   computeCoordinateSystems();
-  computeStrandsInNode(root);  // compute all strands recursively
+  computeStrandsInNode(0);  // compute all strands recursively
   applyPBD();
 }
 
 // recursively compute strands in specified node of the plant graph
-void Tree::computeStrandsInNode(const Node& node) {
-  std::vector<int>& children = pg.adj[node.id];
+void Tree::computeStrandsInNode(int nodeId) {
+  const Node& node = pg.getNode(nodeId);
+  glm::mat3 currentFrontplane = frontplanes[nodeId];
+  std::vector<int>& children = pg.adj[nodeId];
 
   // 1. compute strands for children (or create strands if there are no children)
   if (!children.empty()) {
     for (auto child : children) {
-      computeStrandsInNode(pg.getNode(child));
+      computeStrandsInNode(child);
     }
   } else {
     // leaf nodes (no outgoing branches)
-    // generate strand positions randomly in a defined radius
+    // generate strand particle positions randomly in a defined radius
     for (int i = 0; i < NUM_STRANDS_PER_LEAF; ++i) {
       float radius = NODE_STRAND_AREA_RADIUS - STRAND_RADIUS;
       float theta = static_cast<float>(std::rand()) / RAND_MAX * 2 * M_PI;
 
-      glm::vec3 strandPos = {radius * std::cos(theta), radius * std::sin(theta), 0};
+      glm::vec3 particlePos = {radius * std::cos(theta), radius * std::sin(theta), 0};
 
-      nodeStrands[node.id].push_back(Strand(strandPos));
+      Strand strand;
+      auto particle = strand.addParticle(node.pos + currentFrontplane * particlePos, particlePos);
+
+      strands.push_back(strand);
+      nodeParticles[nodeId].push_back(particle);
     }
 
     return;  // nothing more to do for leaf nodes
@@ -50,8 +55,12 @@ void Tree::computeStrandsInNode(const Node& node) {
   bool branching = children.size() > 1;
   if (!branching) {
     for (auto child : children) {
-      for (auto& strandPos : nodeStrands[child]) {
-        nodeStrands[node.id].push_back(strandPos);
+      for (auto& particle : nodeParticles[child]) {
+        // project in same position
+        auto newParticle = strands[particle->strandId].addParticle(
+            node.pos + currentFrontplane * particle->localPos, particle->localPos
+        );
+        nodeParticles[nodeId].push_back(newParticle);
       }
     }
 
@@ -59,9 +68,9 @@ void Tree::computeStrandsInNode(const Node& node) {
   }
 
   // strands coming from multiple branches -> merge algorithm
-  // sort the children (ascending) according to their amount of strands
-  std::sort(children.begin(), children.end(), [&](int a, int b) {
-    return nodeStrands[a].size() > nodeStrands[b].size();
+  // sort the children (ascending) according to their amount of strand particles
+  std::sort(children.begin(), children.end(), [&](int a, int b) -> bool {
+    return nodeParticles[a].size() > nodeParticles[b].size();
   });
 
   float dlarge = 0.0f;
@@ -70,17 +79,20 @@ void Tree::computeStrandsInNode(const Node& node) {
     glm::vec3 dir{glm::normalize(glm::vec2{pg.getNode(child).pos - node.pos}), 0.0f};
 
     float dsmall = 0.0f;
-    for (auto& strand : nodeStrands[child]) {
+    for (auto& particle : nodeParticles[child]) {
       // offset (length and direction) to project from origin
       float offset = i != 0 ? dlarge + dsmall : 0;
-      glm::vec3 mergedPos = strand.pos + offset * dir;
+      glm::vec3 mergedPos = particle->localPos + offset * dir;
 
       if (i == 0)
         dlarge = std::max(dlarge, glm::length(mergedPos));
       else
         dsmall = std::max(dsmall, glm::length(mergedPos) - dlarge);
 
-      nodeStrands[node.id].push_back(Strand(strand.id, mergedPos));
+      auto newParticle = strands[particle->strandId].addParticle(
+          node.pos + currentFrontplane * mergedPos, mergedPos
+      );
+      nodeParticles[nodeId].push_back(newParticle);
     }
   }
 }
@@ -110,76 +122,46 @@ void Tree::applyPBD() {
       {}, attractors, 0.02, 0.002, STRAND_RADIUS, {0.0f, 0.0f, 0.0f}, 0.5 * NODE_STRAND_AREA_RADIUS
   );
 
-  for (auto& [id, strands] : nodeStrands) {
+  for (auto& [nodeId, particles] : nodeParticles) {
     std::vector<glm::vec3> pos;
 
-    for (auto& strand : strands) pos.push_back(strand.pos);
+    for (auto& particle : particles) pos.push_back(particle->localPos);
 
     // execute pbd for every node, to "pack" the strands, without intersections
     pbd.setPoints(pos);
     pos = pbd.execute(5 * Strand::getStrandCount());
 
-    for (int i = 0; i < strands.size(); ++i) strands[i].pos = pos[i];
+    // set the strand particles position after running the PBD simulation
+    for (int i = 0; i < particles.size(); ++i) {
+      particles[i]->pos = pg.getNode(nodeId).pos + frontplanes[nodeId] * pos[i];
+      particles[i]->localPos = pos[i];
+    }
+  }
+}
+
+void Tree::interpolateStrandParticles() {
+  for (auto& strand : strands) {
+    strand.interpolateParticles();
   }
 }
 
 /* ---------------------- DISPLAY METHODS ---------------------- */
 
-void Tree::printNodeStrands() const {
-  for (const auto& [id, strands] : nodeStrands) {
-    std::cout << "Node ID: " << id << std::endl;
-    for (size_t i = 0; i < strands.size(); ++i) {
-      std::cout << "\tStrand id=" << strands[i].id << ": (" << strands[i].pos.x << ", "
-                << strands[i].pos.y << ", " << strands[i].pos.z << ")" << std::endl;
-    }
+void Tree::printNodeParticles(int nodeId) const {
+  std::cout << "Particles at node ID: " << nodeId << std::endl;
+  for (auto& particle : nodeParticles.at(nodeId)) {
+    std::cout << particle << std::endl;
   }
 }
 
-std::vector<Spline> Tree::generateSplines() const {
-  int nSplines = Strand::getStrandCount();
-  std::vector<Spline> splines;
-  std::vector<std::vector<glm::vec3>> allPositions(nSplines);
-
-  pg.traverseDFS(0, [&](const Node& n) {
-    for (const auto& strand : nodeStrands.at(n.id)) {
-      allPositions[strand.id].push_back(n.pos + frontplanes.at(n.id) * strand.pos);
-    }
-  });
-
-  for (int i = 0; i < nSplines; ++i) {
-    splines.emplace_back(allPositions[i]);
+void Tree::renderStrands() const {
+  for (auto& strand : strands) {
+    strand.renderStrand();
   }
-
-  return splines;
 }
 
-void Tree::showStrandsPoints() {
-  unsigned int vao, vbo;
-  glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vbo);
-
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-  std::vector<glm::vec3> positions;
-  for (const auto& [id, strands] : nodeStrands) {
-    glm::mat3 fp = frontplanes[id];
-    glm::vec3 origin = pg.getNode(id).pos;
-
-    for (const auto& strand : strands) {
-      positions.push_back(origin + fp * strand.pos);
-    }
+void Tree::renderStrandParticles() const {
+  for (auto& strand : strands) {
+    strand.renderStrandParticles();
   }
-
-  glBufferData(
-      GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), &positions[0], GL_STATIC_DRAW
-  );
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-  glEnableVertexAttribArray(0);
-
-  glDrawArrays(GL_POINTS, 0, positions.size());
-
-  glBindVertexArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }

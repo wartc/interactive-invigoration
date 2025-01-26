@@ -2,11 +2,13 @@
 #define __TREE_H__
 
 #include <map>
+#include <memory>
+#include <vector>
 
 #include <glm/glm.hpp>
 
 #include "core/PlantGraph.h"
-#include "geometry/Spline.h"
+#include "core/Strand.h"
 
 constexpr int NUM_STRANDS_PER_LEAF = 10;
 constexpr float STRAND_RADIUS = 0.02f;
@@ -17,36 +19,26 @@ constexpr glm::mat3 DEFAULT_COORDINATES{
     {0.0f, 1.0f,  0.0f}
 };
 
-struct Strand {
- private:
-  inline static int ID_COUNTER = 0;
-
- public:
-  const int id;
-  glm::vec3 pos;
-
-  explicit Strand(int _id, glm::vec3 _pos) : id{_id}, pos{_pos} {}
-  explicit Strand(glm::vec3 _pos) : id{ID_COUNTER++}, pos{_pos} {}
-
-  static int getStrandCount() { return ID_COUNTER; }
-};
-
 class Tree {
   PlantGraph& pg;
 
   std::map<int, glm::mat3> frontplanes;
-  std::map<int, std::vector<Strand>> nodeStrands;
+  std::vector<Strand> strands;
+  std::map<int, std::vector<std::shared_ptr<StrandParticle>>> nodeParticles;
 
  public:
   Tree(PlantGraph& _pg) : pg{_pg} {}
 
   void computeStrandsPosition();
-  std::vector<Spline> generateSplines() const;
-  void showStrandsPoints();
-  void printNodeStrands() const;
+  void interpolateStrandParticles();
+
+  void renderStrands() const;
+  void renderStrandParticles() const;
+
+  void printNodeParticles(int nodeId) const;
 
  private:
-  void computeStrandsInNode(const Node& node);
+  void computeStrandsInNode(int nodeId);
   void computeCoordinateSystems();
   void applyPBD();
 };

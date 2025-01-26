@@ -6,42 +6,61 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-constexpr float SPLINE_ALPHA = 0.5f;  // centripetal catmull-rom
+constexpr int NUM_INTERPOLATED_POINTS = 10;  // 10 points between each other when interpolating
+constexpr float SPLINE_ALPHA = 0.5f;         // centripetal catmull-rom
 constexpr float SPLINE_TENSION = 0.4f;
 
 class Spline {
  private:
-  std::vector<glm::vec3> points{};
+  // vertex data for rendering
   std::vector<unsigned int> indices{};
   unsigned int vbo{}, ebo{}, vao{};
 
  public:
+  std::vector<glm::vec3> points{};
+
   Spline() {}
 
-  explicit Spline(const std::vector<glm::vec3>& points_) : points{points_} {
-    smoothSpline();
-    init();
-  }
+  explicit Spline(const std::vector<glm::vec3>& points_) : points{points_} {}
 
-  explicit Spline(std::vector<glm::vec3>&& points_) noexcept : points(std::move(points_)) {
-    smoothSpline();
-    init();
-  }
+  explicit Spline(std::vector<glm::vec3>&& points_) noexcept : points(std::move(points_)) {}
 
-  void draw() {
+  void render() {
     glBindVertexArray(vao);
     glDrawElements(GL_LINES, indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
   }
 
-  void setPoints(const std::vector<glm::vec3>& points_) {
-    points = points_;
-    smoothSpline();
-    init();
+  // interpolate and update the `points` vector
+  void smoothenSpline() { points = interpolate(); }
+
+  // interpolate the `points` vector and return the newly interpolated vertices
+  std::vector<glm::vec3> interpolate() {
+    int nPoints = points.size();
+    assert(nPoints > 1);
+
+    const float step = 1.0f / NUM_INTERPOLATED_POINTS;
+    std::vector<glm::vec3> interpolated;
+    glm::vec3 start = 2.0f * points[0] - points[1];
+    glm::vec3 end = 2.0f * points[nPoints - 1] - points[nPoints - 2];
+
+    for (int i = 0; i < nPoints - 1; ++i) {
+      glm::vec3 p0 = i >= 1 ? points[i - 1] : start;
+      glm::vec3 p4 = i + 2 < nPoints ? points[i + 2] : end;
+
+      // interpolate in the interval [ points[i], points[i + 1] )
+      for (float t = 0.0f; t < 1.0f; t += step) {
+        interpolated.push_back(catmullRom(p0, points[i], points[i + 1], p4, t));
+      }
+    }
+
+    // include the last point explicitly
+    interpolated.push_back(points[nPoints - 1]);
+
+    return interpolated;
   }
 
- private:
-  void init() {
+  void initializeBuffers() {
     indices.clear();
 
     for (int i = 0; i < points.size() - 1; ++i) {
@@ -71,31 +90,7 @@ class Spline {
     glBindVertexArray(0);
   }
 
-  void smoothSpline() {
-    int nPoints = points.size();
-    assert(nPoints > 1);
-
-    const float step = 0.1f;
-    std::vector<glm::vec3> interpolated;
-    glm::vec3 start = 2.0f * points[0] - points[1];
-    glm::vec3 end = 2.0f * points[nPoints - 1] - points[nPoints - 2];
-
-    for (int i = 0; i < nPoints - 1; ++i) {
-      glm::vec3 p0 = i >= 1 ? points[i - 1] : start;
-      glm::vec3 p4 = i + 2 < nPoints ? points[i + 2] : end;
-
-      // interpolate in the interval [ points[i], points[i + 1] )
-      for (float t = 0.0f; t < 1.0f; t += step) {
-        interpolated.push_back(catmullRom(p0, points[i], points[i + 1], p4, t));
-      }
-    }
-
-    // include the last point explicitly
-    interpolated.push_back(points[nPoints - 1]);
-
-    points = interpolated;
-  }
-
+ private:
   glm::vec3 catmullRom(
       const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, float t
   ) {

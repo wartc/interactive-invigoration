@@ -7,7 +7,6 @@
 #include "core/PlantGraph.h"
 #include "core/Shader.h"
 #include "core/Tree.h"
-#include "geometry/Spline.h"
 
 constexpr float ASPECT_RATIO = 16.0f / 9.0f;
 constexpr unsigned int WINDOW_WIDTH = 1920, WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
@@ -96,12 +95,12 @@ int main(int argc, char** argv) {
   int id4 = pg.addNode({1.0f, 3.8f, 0.4f}, id3);
   int id5 = pg.addNode({0.8f, 4.2f, -0.6f}, id3);
 
-  Tree t(pg);
+  Tree tree(pg);
 
-  t.computeStrandsPosition();
-  // t.printNodeStrands();
+  tree.computeStrandsPosition();
+  tree.interpolateStrandParticles();
 
-  std::vector<Spline> splines = t.generateSplines();
+  // tree.printNodeStrands();
 
   Shader sh(
       "/home/guerra/dev/graphics/projects/interactive-invigoration/shaders/basic.vert",
@@ -128,10 +127,10 @@ int main(int argc, char** argv) {
     sh.setMat4("model", glm::mat4(1.0f));
 
     sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
-    for (auto sp : splines) sp.draw();
+    tree.renderStrands();
 
-    sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
-    t.showStrandsPoints();
+    // sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
+    // tree.renderStrandParticles();
 
     // glfw processes
     glfwSwapBuffers(window);
