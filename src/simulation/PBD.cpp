@@ -1,11 +1,11 @@
-#include "PBD.h"
+#include "simulation/PBD.h"
 
 #include <algorithm>
 #include <vector>
 
 #include <glm/geometric.hpp>
 
-#include "PBDConstraint.h"
+#include "simulation/PBDConstraint.h"
 
 std::vector<glm::vec3> PBD::execute(int iterations) {
   std::fill(v.begin(), v.end(), glm::vec3{0.0f, 0.0f, 0.0f});

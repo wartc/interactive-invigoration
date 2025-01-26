@@ -6,7 +6,7 @@
 
 #include <glm/glm.hpp>
 
-#include "PBDConstraint.h"
+#include "simulation/PBDConstraint.h"
 
 constexpr float GAMMA_ATTRACTION = 100.0f;
 constexpr int SOLVER_INTERATIONS = 100;

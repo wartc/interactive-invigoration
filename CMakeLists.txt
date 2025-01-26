@@ -26,7 +26,7 @@ set(SOURCES
     ${MAIN_SOURCE}
 )
 
-# Include directories
+# include directories
 include_directories(
     include
     include/core

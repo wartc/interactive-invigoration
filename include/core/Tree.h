@@ -1,12 +1,12 @@
-#ifndef __STRAND_H__
-#define __STRAND_H__
+#ifndef __TREE_H__
+#define __TREE_H__
 
 #include <map>
 
-#include <glm/gtc/matrix_transform.hpp>
+#include <glm/glm.hpp>
 
-#include "PlantGraph.h"
-#include "Spline.h"
+#include "core/PlantGraph.h"
+#include "geometry/Spline.h"
 
 constexpr int NUM_STRANDS_PER_LEAF = 10;
 constexpr float STRAND_RADIUS = 0.02f;

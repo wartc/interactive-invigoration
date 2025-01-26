@@ -1,4 +1,4 @@
-#include "Tree.h"
+#include "core/Tree.h"
 
 #include <algorithm>
 #include <cstdlib>  // for rand
@@ -6,8 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#include "PBD.h"
-#include "PlantGraph.h"
+#include "simulation/PBD.h"
 
 void Tree::computeStrandsPosition() {
   const Node& root = pg.getNode(0);
