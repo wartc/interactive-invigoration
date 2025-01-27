@@ -7,6 +7,7 @@
 #include "core/PlantGraph.h"
 #include "core/Shader.h"
 #include "core/Tree.h"
+#include "geometry/Mesh.h"
 
 constexpr float ASPECT_RATIO = 16.0f / 9.0f;
 constexpr unsigned int WINDOW_WIDTH = 1920, WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
@@ -74,7 +75,7 @@ GLFWwindow* initWindow() {
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_LINE_SMOOTH);
-  glLineWidth(5);
+  // glLineWidth(5);
 
   glPointSize(5);
 
@@ -99,13 +100,12 @@ int main(int argc, char** argv) {
 
   tree.computeStrandsPosition();
   tree.interpolateStrandParticles();
+  // tree.printNodeParticles(0);
+  Mesh m = tree.generateMesh();
 
   // tree.printNodeStrands();
 
-  Shader sh(
-      "/home/guerra/dev/graphics/projects/interactive-invigoration/shaders/basic.vert",
-      "/home/guerra/dev/graphics/projects/interactive-invigoration/shaders/basic.frag"
-  );
+  Shader sh("shaders/basic.vert", "shaders/basic.frag");
 
   while (!glfwWindowShouldClose(window)) {
     // time calculation per frame
@@ -127,10 +127,11 @@ int main(int argc, char** argv) {
     sh.setMat4("model", glm::mat4(1.0f));
 
     sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
-    tree.renderStrands();
+    m.render();
+    // tree.renderStrands();
 
-    // sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
-    // tree.renderStrandParticles();
+    sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
+    tree.renderStrandParticles();
 
     // glfw processes
     glfwSwapBuffers(window);

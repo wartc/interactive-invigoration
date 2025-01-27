@@ -6,8 +6,9 @@
 #include <iostream>
 #include <vector>
 
+#include "core/Strand.h"
+#include "geometry/util.h"
 #include "simulation/PBD.h"
-#include "Strand.h"
 
 void Tree::computeStrandsPosition() {
   time_t t = time(nullptr);
@@ -150,8 +151,20 @@ void Tree::interpolateStrandParticles() {
 void Tree::printNodeParticles(int nodeId) const {
   std::cout << "Particles at node ID: " << nodeId << std::endl;
   for (auto& particle : nodeParticles.at(nodeId)) {
-    std::cout << particle << std::endl;
+    std::cout << *particle << std::endl;
   }
+}
+
+Mesh Tree::generateMesh() const {
+  std::vector<glm::vec3> worldPositions;
+  std::vector<glm::vec2> localPositions;
+
+  for (auto& particle : nodeParticles.at(0)) {
+    worldPositions.emplace_back(particle->pos);
+    localPositions.emplace_back(particle->localPos);
+  }
+
+  return Mesh(worldPositions, util::delaunay(localPositions));
 }
 
 void Tree::renderStrands() const {

@@ -9,6 +9,7 @@
 
 #include "core/PlantGraph.h"
 #include "core/Strand.h"
+#include "geometry/Mesh.h"
 
 constexpr int NUM_STRANDS_PER_LEAF = 10;
 constexpr float STRAND_RADIUS = 0.02f;
@@ -32,6 +33,7 @@ class Tree {
   void computeStrandsPosition();
   void interpolateStrandParticles();
 
+  Mesh generateMesh() const;
   void renderStrands() const;
   void renderStrandParticles() const;
 
