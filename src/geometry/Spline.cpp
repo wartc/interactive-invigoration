@@ -1,6 +1,6 @@
 #include "geometry/Spline.h"
 
-std::vector<glm::vec3> Spline::interpolate() {
+std::vector<glm::vec3> Spline::interpolate(const std::vector<glm::vec3>& points) {
   int nPoints = points.size();
   assert(nPoints > 1);
 

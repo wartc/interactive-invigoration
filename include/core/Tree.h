@@ -27,15 +27,20 @@ class Tree {
   std::vector<Strand> strands;
   std::map<int, std::vector<std::shared_ptr<StrandParticle>>> nodeParticles;
 
+  std::map<int, std::vector<std::vector<StrandParticle>>> interpolatedNodeParticles;
+
  public:
   Tree(PlantGraph& _pg) : pg{_pg} {}
 
   void computeStrandsPosition();
-  void interpolateStrandParticles();
+  void interpolateAllBranchSegments();
+  void interpolateBranchSegment(int branchStartNode);
 
-  Mesh generateMesh() const;
+  // Mesh generateMesh() const;
+  std::vector<Mesh> generateMeshes() const;
   void renderStrands() const;
   void renderStrandParticles() const;
+  void renderInterpolatedParticles() const;
 
   void printNodeParticles(int nodeId) const;
 

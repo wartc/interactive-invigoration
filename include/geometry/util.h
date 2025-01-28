@@ -9,8 +9,6 @@ namespace util {
 
 std::vector<glm::uvec3> delaunay(const std::vector<glm::vec2>& vertices);
 
-std::vector<glm::uvec3> delaunay(const std::vector<glm::vec2>& vertices);
-
 };  // namespace util
 
 #endif

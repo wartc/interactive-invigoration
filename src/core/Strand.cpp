@@ -16,8 +16,7 @@ void Strand::interpolateParticles() {
 
   for (int i = 0; i < particles.size(); ++i) positions[i] = particles[i]->pos;
 
-  Spline spline(positions);
-  auto interpolatedPositions = spline.interpolate();
+  auto interpolatedPositions = Spline::interpolate(positions);
 
   // new particles vector
   std::vector<std::shared_ptr<StrandParticle>> updatedParticles;
@@ -43,6 +42,7 @@ void Strand::renderStrand() const {
   for (int i = 0; i < particles.size(); ++i) positions[i] = particles[i]->pos;
 
   Spline spline(positions);
+  spline.smoothenSpline();
 
   spline.initializeBuffers();
   spline.render();

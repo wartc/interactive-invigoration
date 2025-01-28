@@ -28,15 +28,15 @@ class Spline {
   void render();
 
   // interpolate and update the `points` vector
-  void smoothenSpline() { points = interpolate(); }
+  void smoothenSpline() { points = interpolate(points); }
 
-  // interpolate the `points` vector and return the newly interpolated vertices
-  std::vector<glm::vec3> interpolate();
+  // interpolate the points given and return the newly interpolated vertices
+  static std::vector<glm::vec3> interpolate(const std::vector<glm::vec3>& points_);
 
   void initializeBuffers();
 
  private:
-  glm::vec3 catmullRom(
+  static glm::vec3 catmullRom(
       const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, float t
   );
 };

@@ -6,6 +6,8 @@
 #include <iostream>
 #include <vector>
 
+#include <glad/glad.h>
+
 #include "core/Strand.h"
 #include "geometry/util.h"
 #include "simulation/PBD.h"
@@ -140,9 +142,59 @@ void Tree::applyPBD() {
   }
 }
 
-void Tree::interpolateStrandParticles() {
-  for (auto& strand : strands) {
-    strand.interpolateParticles();
+void Tree::interpolateAllBranchSegments() {
+  for (int i = 0; i < Node::getNodeCount(); ++i) interpolateBranchSegment(i);
+}
+
+void Tree::interpolateBranchSegment(int branchStartNode) {
+  interpolatedNodeParticles[branchStartNode] = {};
+
+  if (pg.adj[branchStartNode].empty()) return;  // ignore leaf nodes
+
+  const int NUM_STEPS = 10;
+  const float step = 1.0f / NUM_STEPS;
+
+  const Node& startNode = pg.getNode(branchStartNode);
+  for (auto& childId : pg.adj[branchStartNode]) {
+    const Node& endNode = pg.getNode(childId);
+
+    glm::vec3 yparent = frontplanes[branchStartNode][1];
+    glm::vec3 zaxis = glm::normalize(endNode.pos - startNode.pos);
+    glm::vec3 xaxis = glm::normalize(glm::cross(yparent, zaxis));
+    glm::vec3 yaxis = glm::cross(zaxis, xaxis);
+
+    glm::mat3 transportPlane = glm::mat3(xaxis, yaxis, zaxis);
+
+    for (int i = 1; i < NUM_STEPS; ++i) {
+      std::vector<StrandParticle> crossSection;
+      float t = i * step;
+
+      for (auto& particle : nodeParticles[childId]) {
+        glm::vec3 parentParticleLocalPos;
+        for (auto& parentParticle : nodeParticles[branchStartNode]) {
+          if (parentParticle->strandId == particle->strandId) {
+            parentParticleLocalPos = parentParticle->localPos;
+            break;
+          }
+        }
+
+        glm::vec3 interpolatedLocal = (1 - t) * parentParticleLocalPos + t * particle->localPos;
+        glm::vec3 interpolatedOrigin = (1 - t) * startNode.pos + t * endNode.pos;
+        glm::vec3 interpolatedWorldPos = interpolatedOrigin + transportPlane * interpolatedLocal;
+
+        crossSection.emplace_back(particle->strandId, interpolatedWorldPos, interpolatedLocal);
+      }
+
+      interpolatedNodeParticles[branchStartNode].push_back(crossSection);
+    }
+  }
+
+  std::cout << "Interpolated branch segment starting from: " << branchStartNode << std::endl;
+  int i = 0;
+  for (auto& crossSection : interpolatedNodeParticles[branchStartNode]) {
+    std::cout << "Cross section #" << i++ << " particles" << std::endl;
+
+    for (auto& particle : crossSection) std::cout << particle << std::endl;
   }
 }
 
@@ -155,16 +207,28 @@ void Tree::printNodeParticles(int nodeId) const {
   }
 }
 
-Mesh Tree::generateMesh() const {
-  std::vector<glm::vec3> worldPositions;
-  std::vector<glm::vec2> localPositions;
-
-  for (auto& particle : nodeParticles.at(0)) {
-    worldPositions.emplace_back(particle->pos);
-    localPositions.emplace_back(particle->localPos);
+std::vector<Mesh> Tree::generateMeshes() const {
+  std::vector<Mesh> meshes;
+  for (int i = 0; i < Node::getNodeCount(); ++i) {
+    std::vector<glm::vec3> worldPositions;
+    std::vector<glm::vec2> localPositions;
+    for (auto& particle : nodeParticles.at(i)) {
+      worldPositions.emplace_back(particle->pos);
+      localPositions.emplace_back(particle->localPos);
+    }
+    meshes.emplace_back(worldPositions, util::delaunay(localPositions));
+    for (auto& crossSection : interpolatedNodeParticles.at(i)) {
+      worldPositions.clear();
+      localPositions.clear();
+      for (auto& particle : crossSection) {
+        worldPositions.emplace_back(particle.pos);
+        localPositions.emplace_back(particle.localPos);
+      }
+      meshes.emplace_back(worldPositions, util::delaunay(localPositions));
+    }
   }
 
-  return Mesh(worldPositions, util::delaunay(localPositions));
+  return meshes;
 }
 
 void Tree::renderStrands() const {
@@ -177,4 +241,34 @@ void Tree::renderStrandParticles() const {
   for (auto& strand : strands) {
     strand.renderStrandParticles();
   }
+}
+
+void Tree::renderInterpolatedParticles() const {
+  unsigned int vao, vbo;
+  glGenVertexArrays(1, &vao);
+  glGenBuffers(1, &vbo);
+
+  glBindVertexArray(vao);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+  std::vector<glm::vec3> positions;
+  for (auto& [id, particles] : nodeParticles) {
+    for (auto& particle : particles) positions.push_back(particle->pos);
+    std::cout << id << std::endl;
+    for (auto& crossSection : interpolatedNodeParticles.at(id)) {
+      for (auto& particle : crossSection) positions.push_back(particle.pos);
+    }
+  };
+
+  glBufferData(
+      GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), &positions[0], GL_STATIC_DRAW
+  );
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+  glEnableVertexAttribArray(0);
+
+  glDrawArrays(GL_POINTS, 0, positions.size());
+
+  glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }

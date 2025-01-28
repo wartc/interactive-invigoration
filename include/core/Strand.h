@@ -37,6 +37,8 @@ class Strand {
 
   std::shared_ptr<StrandParticle> addParticle(const glm::vec3& pos, const glm::vec3& localPos = {});
 
+  const std::vector<std::shared_ptr<StrandParticle>>& getParticles() { return particles; }
+
   void interpolateParticles();
   void renderStrandParticles() const;
   void renderStrand() const;
