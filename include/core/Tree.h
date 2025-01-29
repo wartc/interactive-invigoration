@@ -48,6 +48,10 @@ class Tree {
   void computeStrandsInNode(int nodeId);
   void computeCoordinateSystems();
   void applyPBD();
+
+  std::pair<int, int> findClosestStrandParticlesToPlane(
+      int strandId, glm::vec3 planeOrigin, glm::vec3 planeNormal
+  );
 };
 
 #endif

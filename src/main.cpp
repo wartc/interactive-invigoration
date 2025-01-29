@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
   // tree.interpolateStrandParticles();
   tree.interpolateAllBranchSegments();
   // tree.printNodeParticles(0);
-  auto meshes = tree.generateMeshes();
+  // auto meshes = tree.generateMeshes();
 
   // tree.printNodeStrands();
 
@@ -128,11 +128,13 @@ int main(int argc, char** argv) {
     sh.setMat4("model", glm::mat4(1.0f));
 
     sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
-    for (auto& m : meshes) m.render();
-    tree.renderInterpolatedParticles();
-    // tree.renderStrands();
+    // for (auto& m : meshes) m.render();
+    tree.renderStrands();
 
     sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
+    tree.renderInterpolatedParticles();
+
+    sh.setVec4("splineColor", {1.0f, 0.0f, 1.0f, 1.0f});
     tree.renderStrandParticles();
 
     // glfw processes

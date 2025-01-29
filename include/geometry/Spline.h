@@ -33,9 +33,11 @@ class Spline {
   // interpolate the points given and return the newly interpolated vertices
   static std::vector<glm::vec3> interpolate(const std::vector<glm::vec3>& points_);
 
+  // interpolate two points only
+  static glm::vec3 interpolate(const glm::vec3& p1, const glm::vec3& p2, float t);
+
   void initializeBuffers();
 
- private:
   static glm::vec3 catmullRom(
       const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, float t
   );

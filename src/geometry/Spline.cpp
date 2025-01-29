@@ -14,7 +14,8 @@ std::vector<glm::vec3> Spline::interpolate(const std::vector<glm::vec3>& points)
     glm::vec3 p4 = i + 2 < nPoints ? points[i + 2] : end;
 
     // interpolate in the interval [ points[i], points[i + 1] )
-    for (float t = 0.0f; t < 1.0f; t += step) {
+    for (int j = 0; j < NUM_INTERPOLATED_POINTS; ++j) {
+      float t = j * step;
       interpolated.push_back(catmullRom(p0, points[i], points[i + 1], p4, t));
     }
   }
@@ -23,6 +24,13 @@ std::vector<glm::vec3> Spline::interpolate(const std::vector<glm::vec3>& points)
   interpolated.push_back(points[nPoints - 1]);
 
   return interpolated;
+}
+
+glm::vec3 Spline::interpolate(const glm::vec3& p1, const glm::vec3& p2, float t) {
+  glm::vec3 start = 2.0f * p1 - p2;
+  glm::vec3 end = -start;
+
+  return catmullRom(start, p1, p2, end, t);
 }
 
 glm::vec3 Spline::catmullRom(

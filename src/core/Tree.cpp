@@ -9,6 +9,7 @@
 #include <glad/glad.h>
 
 #include "core/Strand.h"
+#include "geometry/Spline.h"
 #include "geometry/util.h"
 #include "simulation/PBD.h"
 
@@ -142,7 +143,28 @@ void Tree::applyPBD() {
   }
 }
 
+// *normal vector must be normalized. returns pair of closest points on opposite sides of the plane
+std::pair<int, int> Tree::findClosestStrandParticlesToPlane(
+    int strandId, glm::vec3 planeOrigin, glm::vec3 planeNormal
+) {
+  const auto& particles = strands[strandId].getParticles();
+
+  assert(particles.size() >= 2);
+
+  float previousDist = glm::dot(planeNormal, particles[0]->pos - planeOrigin);
+  for (int i = 1; i < particles.size(); ++i) {
+    float dist = glm::dot(planeNormal, particles[i]->pos - planeOrigin);
+
+    if ((previousDist < 0 && dist >= 0) || (previousDist > 0 && dist <= 0)) {
+      return {i - 1, i};
+    }
+  }
+
+  return {-1, -1};  // the strand does not cross the plane
+}
+
 void Tree::interpolateAllBranchSegments() {
+  for (int i = 0; i < Strand::getStrandCount(); ++i) strands[i].interpolateParticles();
   for (int i = 0; i < Node::getNodeCount(); ++i) interpolateBranchSegment(i);
 }
 
@@ -155,46 +177,44 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
   const float step = 1.0f / NUM_STEPS;
 
   const Node& startNode = pg.getNode(branchStartNode);
-  for (auto& childId : pg.adj[branchStartNode]) {
-    const Node& endNode = pg.getNode(childId);
 
-    glm::vec3 yparent = frontplanes[branchStartNode][1];
-    glm::vec3 zaxis = glm::normalize(endNode.pos - startNode.pos);
-    glm::vec3 xaxis = glm::normalize(glm::cross(yparent, zaxis));
-    glm::vec3 yaxis = glm::cross(zaxis, xaxis);
+  for (auto& childBranch : pg.adj[branchStartNode]) {
+    const Node& endNode = pg.getNode(childBranch);  // change to user input or tallest
+    std::vector<glm::vec3> interpolatedPlaneOrigins =
+        Spline::interpolate({startNode.pos, endNode.pos});
 
-    glm::mat3 transportPlane = glm::mat3(xaxis, yaxis, zaxis);
-
-    for (int i = 1; i < NUM_STEPS; ++i) {
+    for (int i = 1; i < interpolatedPlaneOrigins.size() - 1; ++i) {
       std::vector<StrandParticle> crossSection;
-      float t = i * step;
+      // change to compute with tallest child node
 
-      for (auto& particle : nodeParticles[childId]) {
-        glm::vec3 parentParticleLocalPos;
-        for (auto& parentParticle : nodeParticles[branchStartNode]) {
-          if (parentParticle->strandId == particle->strandId) {
-            parentParticleLocalPos = parentParticle->localPos;
-            break;
-          }
+      for (auto& nodeParticle : nodeParticles[branchStartNode]) {
+        int strandId = nodeParticle->strandId;
+
+        auto [idx1, idx2] = findClosestStrandParticlesToPlane(
+            strandId, interpolatedPlaneOrigins[i], frontplanes[childBranch][2]
+        );
+
+        if (idx1 > 0 && idx2 > 0) {
+          const auto& strandParticles = strands[strandId].getParticles();
+          glm::vec3 defaultStart = 2.0f * (strandParticles[idx1]->pos - strandParticles[idx2]->pos);
+          glm::vec3 before = idx1 - 1 >= 0 ? strandParticles[idx1 - 1]->pos : defaultStart;
+          glm::vec3 after =
+              idx2 + 1 < strandParticles.size() ? strandParticles[idx2 + 1]->pos : -defaultStart;
+
+          glm::vec3 interpolatedPos = Spline::catmullRom(
+              before, strandParticles[idx1]->pos, strandParticles[idx2]->pos, after, 0.5f
+          );
+
+          glm::vec3 projectedPos =
+              interpolatedPos -
+              glm::dot(interpolatedPos - interpolatedPlaneOrigins[i], frontplanes[childBranch][2]) *
+                  frontplanes[childBranch][2];
+
+          crossSection.emplace_back(strandId, projectedPos);
         }
-
-        glm::vec3 interpolatedLocal = (1 - t) * parentParticleLocalPos + t * particle->localPos;
-        glm::vec3 interpolatedOrigin = (1 - t) * startNode.pos + t * endNode.pos;
-        glm::vec3 interpolatedWorldPos = interpolatedOrigin + transportPlane * interpolatedLocal;
-
-        crossSection.emplace_back(particle->strandId, interpolatedWorldPos, interpolatedLocal);
       }
-
       interpolatedNodeParticles[branchStartNode].push_back(crossSection);
     }
-  }
-
-  std::cout << "Interpolated branch segment starting from: " << branchStartNode << std::endl;
-  int i = 0;
-  for (auto& crossSection : interpolatedNodeParticles[branchStartNode]) {
-    std::cout << "Cross section #" << i++ << " particles" << std::endl;
-
-    for (auto& particle : crossSection) std::cout << particle << std::endl;
   }
 }
 
@@ -253,8 +273,7 @@ void Tree::renderInterpolatedParticles() const {
 
   std::vector<glm::vec3> positions;
   for (auto& [id, particles] : nodeParticles) {
-    for (auto& particle : particles) positions.push_back(particle->pos);
-    std::cout << id << std::endl;
+    for (auto& particle : nodeParticles.at(id)) positions.push_back(particle->pos);
     for (auto& crossSection : interpolatedNodeParticles.at(id)) {
       for (auto& particle : crossSection) positions.push_back(particle.pos);
     }
