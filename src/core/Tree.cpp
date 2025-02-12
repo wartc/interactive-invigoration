@@ -177,44 +177,42 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
   const float step = 1.0f / NUM_STEPS;
 
   const Node& startNode = pg.getNode(branchStartNode);
+  const Node& endNode = pg.getNode(pg.adj[branchStartNode][0]);  // change to user input or tallest
 
-  for (auto& childBranch : pg.adj[branchStartNode]) {
-    const Node& endNode = pg.getNode(childBranch);  // change to user input or tallest
-    std::vector<glm::vec3> interpolatedPlaneOrigins =
-        Spline::interpolate({startNode.pos, endNode.pos});
+  std::vector<glm::vec3> interpolatedPlaneOrigins =
+      Spline::interpolate({startNode.pos, endNode.pos});
 
-    for (int i = 1; i < interpolatedPlaneOrigins.size() - 1; ++i) {
-      std::vector<StrandParticle> crossSection;
-      // change to compute with tallest child node
+  for (int i = 1; i < interpolatedPlaneOrigins.size() - 1; ++i) {
+    std::vector<StrandParticle> crossSection;
+    // change to compute with tallest child node
 
-      for (auto& nodeParticle : nodeParticles[branchStartNode]) {
-        int strandId = nodeParticle->strandId;
+    for (auto& nodeParticle : nodeParticles[branchStartNode]) {
+      int strandId = nodeParticle->strandId;
 
-        auto [idx1, idx2] = findClosestStrandParticlesToPlane(
-            strandId, interpolatedPlaneOrigins[i], frontplanes[childBranch][2]
+      auto [idx1, idx2] = findClosestStrandParticlesToPlane(
+          strandId, interpolatedPlaneOrigins[i], DEFAULT_COORDINATES[2]
+      );
+
+      if (idx1 > 0 && idx2 > 0) {
+        const auto& strandParticles = strands[strandId].getParticles();
+        glm::vec3 defaultStart = 2.0f * (strandParticles[idx1]->pos - strandParticles[idx2]->pos);
+        glm::vec3 before = idx1 - 1 >= 0 ? strandParticles[idx1 - 1]->pos : defaultStart;
+        glm::vec3 after =
+            idx2 + 1 < strandParticles.size() ? strandParticles[idx2 + 1]->pos : -defaultStart;
+
+        glm::vec3 interpolatedPos = Spline::catmullRom(
+            before, strandParticles[idx1]->pos, strandParticles[idx2]->pos, after, 0.5f
         );
 
-        if (idx1 > 0 && idx2 > 0) {
-          const auto& strandParticles = strands[strandId].getParticles();
-          glm::vec3 defaultStart = 2.0f * (strandParticles[idx1]->pos - strandParticles[idx2]->pos);
-          glm::vec3 before = idx1 - 1 >= 0 ? strandParticles[idx1 - 1]->pos : defaultStart;
-          glm::vec3 after =
-              idx2 + 1 < strandParticles.size() ? strandParticles[idx2 + 1]->pos : -defaultStart;
+        glm::vec3 projectedPos =
+            interpolatedPos -
+            glm::dot(interpolatedPos - interpolatedPlaneOrigins[i], DEFAULT_COORDINATES[2]) *
+                DEFAULT_COORDINATES[2];
 
-          glm::vec3 interpolatedPos = Spline::catmullRom(
-              before, strandParticles[idx1]->pos, strandParticles[idx2]->pos, after, 0.5f
-          );
-
-          glm::vec3 projectedPos =
-              interpolatedPos -
-              glm::dot(interpolatedPos - interpolatedPlaneOrigins[i], frontplanes[childBranch][2]) *
-                  frontplanes[childBranch][2];
-
-          crossSection.emplace_back(strandId, projectedPos);
-        }
+        crossSection.emplace_back(strandId, projectedPos);
       }
-      interpolatedNodeParticles[branchStartNode].push_back(crossSection);
     }
+    interpolatedNodeParticles[branchStartNode].push_back(crossSection);
   }
 }
 
