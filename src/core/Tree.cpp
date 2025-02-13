@@ -9,6 +9,7 @@
 #include <glad/glad.h>
 
 #include "core/Strand.h"
+#include "geometry/Spline.h"  // for NUM_INTERPOLATED_POINTS
 #include "geometry/util.h"
 #include "simulation/PBD.h"
 
@@ -143,6 +144,7 @@ void Tree::applyPBD() {
 }
 
 void Tree::interpolateAllBranchSegments() {
+  for (int i = 0; i < Strand::getStrandCount(); ++i) strands[i].interpolateParticles();
   for (int i = 0; i < Node::getNodeCount(); ++i) interpolateBranchSegment(i);
 }
 
@@ -151,50 +153,50 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
 
   if (pg.adj[branchStartNode].empty()) return;  // ignore leaf nodes
 
-  const int NUM_STEPS = 10;
-  const float step = 1.0f / NUM_STEPS;
-
   const Node& startNode = pg.getNode(branchStartNode);
   for (auto& childId : pg.adj[branchStartNode]) {
     const Node& endNode = pg.getNode(childId);
 
-    glm::vec3 yparent = frontplanes[branchStartNode][1];
-    glm::vec3 zaxis = glm::normalize(endNode.pos - startNode.pos);
-    glm::vec3 xaxis = glm::normalize(glm::cross(yparent, zaxis));
-    glm::vec3 yaxis = glm::cross(zaxis, xaxis);
+    for (int i = 1; i < NUM_INTERPOLATED_POINTS; ++i) {
+      std::map<std::pair<int, int>, glm::vec3> crossSection;
 
-    glm::mat3 transportPlane = glm::mat3(xaxis, yaxis, zaxis);
-
-    for (int i = 1; i < NUM_STEPS; ++i) {
-      std::vector<StrandParticle> crossSection;
-      float t = i * step;
-
+      // add the corresponding interpolation level to the cross section (not coplanar yet)
       for (auto& particle : nodeParticles[childId]) {
-        glm::vec3 parentParticleLocalPos;
-        for (auto& parentParticle : nodeParticles[branchStartNode]) {
-          if (parentParticle->strandId == particle->strandId) {
-            parentParticleLocalPos = parentParticle->localPos;
-            break;
-          }
+        glm::vec3 parentParticleIdx;
+        const auto& strandParticles = strands[particle->strandId].getParticles();
+
+        int idx;
+        for (idx = 0; idx < strandParticles.size(); ++idx) {
+          if (strandParticles[idx] == particle) break;
         }
 
-        glm::vec3 interpolatedLocal = (1 - t) * parentParticleLocalPos + t * particle->localPos;
-        glm::vec3 interpolatedOrigin = (1 - t) * startNode.pos + t * endNode.pos;
-        glm::vec3 interpolatedWorldPos = interpolatedOrigin + transportPlane * interpolatedLocal;
+        crossSection[{particle->strandId, idx + i}] = strandParticles[idx + i]->pos;
+      }
 
-        crossSection.emplace_back(particle->strandId, interpolatedWorldPos, interpolatedLocal);
+      // calculate least squares plane
+      glm::vec3 planeOrigin, planeNormal;
+      std::vector<glm::vec3> positions;
+
+      for (const auto& [_, pos] : crossSection) positions.push_back(pos);
+
+      std::tie(planeOrigin, planeNormal) = util::computeLeastSquaresFittingPlane(positions);
+
+      // construct orthonormal basis
+      glm::vec3 xaxis = glm::normalize(positions[0] - planeOrigin);
+      xaxis = glm::normalize(xaxis - glm::dot(xaxis, planeNormal) * planeNormal);
+      glm::vec3 yaxis = glm::normalize(glm::cross(planeNormal, xaxis));
+      glm::mat3 basis = glm::mat3(xaxis, yaxis, planeNormal);
+
+      // project points to plane and change to 2d basis
+      for (auto& [id, pos] : crossSection) {
+        glm::vec3 v = pos - planeOrigin;
+        glm::vec3 projected = pos - glm::dot(v, planeNormal) * planeNormal;
+        glm::vec3 local = glm::transpose(basis) * (projected - planeOrigin);
+        pos = glm::vec3(local.x, local.y, 0.0f);
       }
 
       interpolatedNodeParticles[branchStartNode].push_back(crossSection);
     }
-  }
-
-  std::cout << "Interpolated branch segment starting from: " << branchStartNode << std::endl;
-  int i = 0;
-  for (auto& crossSection : interpolatedNodeParticles[branchStartNode]) {
-    std::cout << "Cross section #" << i++ << " particles" << std::endl;
-
-    for (auto& particle : crossSection) std::cout << particle << std::endl;
   }
 }
 
@@ -210,21 +212,30 @@ void Tree::printNodeParticles(int nodeId) const {
 std::vector<Mesh> Tree::generateMeshes() const {
   std::vector<Mesh> meshes;
   for (int i = 0; i < Node::getNodeCount(); ++i) {
-    std::vector<glm::vec3> worldPositions;
-    std::vector<glm::vec2> localPositions;
+    // mesh for not interpolated node particles
+    std::vector<glm::vec3> coords;
+    std::vector<glm::vec2> planarCoords;
     for (auto& particle : nodeParticles.at(i)) {
-      worldPositions.emplace_back(particle->pos);
-      localPositions.emplace_back(particle->localPos);
+      coords.emplace_back(particle->pos);
+      planarCoords.emplace_back(particle->localPos);
     }
-    meshes.emplace_back(worldPositions, util::delaunay(localPositions));
-    for (auto& crossSection : interpolatedNodeParticles.at(i)) {
-      worldPositions.clear();
-      localPositions.clear();
-      for (auto& particle : crossSection) {
-        worldPositions.emplace_back(particle.pos);
-        localPositions.emplace_back(particle.localPos);
+    meshes.emplace_back(coords, util::delaunay(planarCoords));
+
+    // mesh for interpolated strand particles
+    for (const auto& crossSection : interpolatedNodeParticles.at(i)) {
+      coords.clear();
+      planarCoords.clear();
+
+      for (auto& [id, pos] : crossSection) {
+        coords.push_back(strands.at(id.first).getParticles().at(id.second)->pos);
+        planarCoords.emplace_back(pos.x, pos.y);
       }
-      meshes.emplace_back(worldPositions, util::delaunay(localPositions));
+
+      std::vector<glm::uvec3> indices = util::delaunay(planarCoords);
+
+      for (auto& index : indices) {
+        meshes.emplace_back(coords, std::vector<glm::uvec3>{index});
+      }
     }
   }
 
@@ -254,9 +265,8 @@ void Tree::renderInterpolatedParticles() const {
   std::vector<glm::vec3> positions;
   for (auto& [id, particles] : nodeParticles) {
     for (auto& particle : particles) positions.push_back(particle->pos);
-    std::cout << id << std::endl;
     for (auto& crossSection : interpolatedNodeParticles.at(id)) {
-      for (auto& particle : crossSection) positions.push_back(particle.pos);
+      for (auto& particle : crossSection) positions.push_back(particle.second);
     }
   };
 

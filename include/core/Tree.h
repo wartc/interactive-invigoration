@@ -27,7 +27,7 @@ class Tree {
   std::vector<Strand> strands;
   std::map<int, std::vector<std::shared_ptr<StrandParticle>>> nodeParticles;
 
-  std::map<int, std::vector<std::vector<StrandParticle>>> interpolatedNodeParticles;
+  std::map<int, std::vector<std::map<std::pair<int, int>, glm::vec3>>> interpolatedNodeParticles;
 
  public:
   Tree(PlantGraph& _pg) : pg{_pg} {}

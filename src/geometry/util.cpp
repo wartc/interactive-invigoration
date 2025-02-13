@@ -6,11 +6,45 @@
 
 #include <CGAL/Delaunay_triangulation_2.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/linear_least_squares_fitting_3.h>
+#include <CGAL/Plane_3.h>
 #include <glm/glm.hpp>
 
-using K = CGAL::Exact_predicates_inexact_constructions_kernel;
-using Delaunay = CGAL::Delaunay_triangulation_2<K>;
-using Point = K::Point_2;
+using DelaunayK = CGAL::Exact_predicates_inexact_constructions_kernel;
+using Delaunay = CGAL::Delaunay_triangulation_2<DelaunayK>;
+using Point = DelaunayK::Point_2;
+
+using CartesianK = CGAL::Simple_cartesian<double>;
+using CGALPoint = CartesianK::Point_3;
+using CGALPlane = CartesianK::Plane_3;
+
+std::pair<glm::vec3, glm::vec3> util::computeLeastSquaresFittingPlane(
+    const std::vector<glm::vec3>& vertices
+) {
+  if (vertices.size() < 3) {
+    throw std::runtime_error("At least 3 points required for plane fitting.");
+  }
+
+  // convert glm::vec3 points to CGAL points
+  std::vector<CGALPoint> cgal_points;
+  for (const auto& v : vertices) {
+    cgal_points.emplace_back(v.x, v.y, v.z);
+  }
+
+  // best-fit plane
+  CGALPlane plane;
+  CGAL::linear_least_squares_fitting_3(
+      cgal_points.begin(), cgal_points.end(), plane, CGAL::Dimension_tag<0>()
+  );
+
+  CartesianK::Point_3 origin = plane.projection(CGAL::ORIGIN);
+  CartesianK::Vector_3 normal = plane.orthogonal_vector();
+  normal = normal / CGAL::sqrt(normal.squared_length());
+
+  return {
+      glm::vec3(origin.x(), origin.y(), origin.z()), glm::vec3(normal.x(), normal.y(), normal.z())
+  };
+}
 
 std::vector<glm::uvec3> util::delaunay(const std::vector<glm::vec2>& vertices) {
   std::vector<glm::uvec3> triangles;

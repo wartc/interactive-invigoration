@@ -28,7 +28,8 @@ void Strand::interpolateParticles() {
       updatedParticles.push_back(particles[particleIndex]);
       ++particleIndex;  // Move to the next existing particle
     } else {
-      auto newParticle = std::make_shared<StrandParticle>(id, interpolatedPos, glm::vec3(0.0f));
+      auto newParticle =
+          std::make_shared<StrandParticle>(id, interpolatedPos, glm::vec3(0.0f), true);
       updatedParticles.push_back(newParticle);
     }
   }

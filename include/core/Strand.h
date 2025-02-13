@@ -8,12 +8,16 @@
 #include <glm/glm.hpp>
 
 struct StrandParticle {
-  int strandId;
+  int strandId{};
+  bool interpolated{};
   glm::vec3 pos;
   glm::vec3 localPos;
 
-  StrandParticle(int _strandId, const glm::vec3& worldp, const glm::vec3& localp = {})
-      : strandId{_strandId}, pos{worldp}, localPos{localp} {}
+  StrandParticle(
+      int _strandId, const glm::vec3& worldp, const glm::vec3& localp = {},
+      bool _interpolated = false
+  )
+      : strandId{_strandId}, pos{worldp}, localPos{localp}, interpolated{_interpolated} {}
 
   friend std::ostream& operator<<(std::ostream& out, const StrandParticle& particle) {
     out << "World: (" << particle.pos.x << ", " << particle.pos.y << ", " << particle.pos.z
@@ -37,7 +41,7 @@ class Strand {
 
   std::shared_ptr<StrandParticle> addParticle(const glm::vec3& pos, const glm::vec3& localPos = {});
 
-  const std::vector<std::shared_ptr<StrandParticle>>& getParticles() { return particles; }
+  const std::vector<std::shared_ptr<StrandParticle>>& getParticles() const { return particles; }
 
   void interpolateParticles();
   void renderStrandParticles() const;
