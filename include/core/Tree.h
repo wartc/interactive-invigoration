@@ -1,6 +1,7 @@
 #ifndef __TREE_H__
 #define __TREE_H__
 
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <vector>
@@ -20,6 +21,14 @@ constexpr glm::mat3 DEFAULT_COORDINATES{
     {0.0f, 1.0f,  0.0f}
 };
 
+struct CrossSection {
+  std::vector<glm::vec3> particlePositions{};
+  std::vector<int> particleStrandIds{};
+  std::vector<int> particleIndices{};
+
+  int getNumParticles() const { return particlePositions.size(); }
+};
+
 class Tree {
   PlantGraph& pg;
 
@@ -27,17 +36,19 @@ class Tree {
   std::vector<Strand> strands;
   std::map<int, std::vector<std::shared_ptr<StrandParticle>>> nodeParticles;
 
-  std::map<int, std::vector<std::map<std::pair<int, int>, glm::vec3>>> interpolatedNodeParticles;
+  std::map<int, std::vector<CrossSection>> interpolatedCrossSections;
 
  public:
   Tree(PlantGraph& _pg) : pg{_pg} {}
 
+  // strand position computation
   void computeStrandsPosition();
   void interpolateAllBranchSegments();
-  void interpolateBranchSegment(int branchStartNode);
 
-  // Mesh generateMesh() const;
+  // mesh generation
   std::vector<Mesh> generateMeshes() const;
+
+  // render methods
   void renderStrands() const;
   void renderStrandParticles() const;
   void renderInterpolatedParticles() const;
@@ -48,6 +59,8 @@ class Tree {
   void computeStrandsInNode(int nodeId);
   void computeCoordinateSystems();
   void applyPBD();
+
+  void interpolateBranchSegment(int branchStartNode);
 };
 
 #endif

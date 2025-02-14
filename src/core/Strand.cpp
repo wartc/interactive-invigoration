@@ -43,7 +43,7 @@ void Strand::renderStrand() const {
   for (int i = 0; i < particles.size(); ++i) positions[i] = particles[i]->pos;
 
   Spline spline(positions);
-  spline.smoothenSpline();
+  // spline.smoothenSpline();
 
   spline.initializeBuffers();
   spline.render();

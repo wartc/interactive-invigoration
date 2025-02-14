@@ -149,20 +149,16 @@ void Tree::interpolateAllBranchSegments() {
 }
 
 void Tree::interpolateBranchSegment(int branchStartNode) {
-  interpolatedNodeParticles[branchStartNode] = {};
+  interpolatedCrossSections[branchStartNode] = {};
 
   if (pg.adj[branchStartNode].empty()) return;  // ignore leaf nodes
 
-  const Node& startNode = pg.getNode(branchStartNode);
   for (auto& childId : pg.adj[branchStartNode]) {
-    const Node& endNode = pg.getNode(childId);
-
     for (int i = 1; i < NUM_INTERPOLATED_POINTS; ++i) {
-      std::map<std::pair<int, int>, glm::vec3> crossSection;
+      CrossSection crossSection;
 
       // add the corresponding interpolation level to the cross section (not coplanar yet)
       for (auto& particle : nodeParticles[childId]) {
-        glm::vec3 parentParticleIdx;
         const auto& strandParticles = strands[particle->strandId].getParticles();
 
         int idx;
@@ -170,32 +166,33 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
           if (strandParticles[idx] == particle) break;
         }
 
-        crossSection[{particle->strandId, idx + i}] = strandParticles[idx + i]->pos;
+        crossSection.particlePositions.push_back(strandParticles[idx + i]->pos);
+        crossSection.particleStrandIds.push_back(particle->strandId);
+        crossSection.particleIndices.push_back(idx + i);
       }
 
       // calculate least squares plane
       glm::vec3 planeOrigin, planeNormal;
-      std::vector<glm::vec3> positions;
 
-      for (const auto& [_, pos] : crossSection) positions.push_back(pos);
-
-      std::tie(planeOrigin, planeNormal) = util::computeLeastSquaresFittingPlane(positions);
+      std::tie(planeOrigin, planeNormal) =
+          util::computeLeastSquaresFittingPlane(crossSection.particlePositions);
 
       // construct orthonormal basis
-      glm::vec3 xaxis = glm::normalize(positions[0] - planeOrigin);
+      glm::vec3 xaxis = glm::normalize(crossSection.particlePositions[0] - planeOrigin);
       xaxis = glm::normalize(xaxis - glm::dot(xaxis, planeNormal) * planeNormal);
       glm::vec3 yaxis = glm::normalize(glm::cross(planeNormal, xaxis));
       glm::mat3 basis = glm::mat3(xaxis, yaxis, planeNormal);
 
       // project points to plane and change to 2d basis
-      for (auto& [id, pos] : crossSection) {
-        glm::vec3 v = pos - planeOrigin;
-        glm::vec3 projected = pos - glm::dot(v, planeNormal) * planeNormal;
+      for (int j = 0; j < crossSection.getNumParticles(); ++j) {
+        glm::vec3 v = crossSection.particlePositions[j] - planeOrigin;
+        glm::vec3 projected =
+            crossSection.particlePositions[j] - glm::dot(v, planeNormal) * planeNormal;
         glm::vec3 local = glm::transpose(basis) * (projected - planeOrigin);
-        pos = glm::vec3(local.x, local.y, 0.0f);
+        crossSection.particlePositions[j] = glm::vec3(local.x, local.y, 0.0f);
       }
 
-      interpolatedNodeParticles[branchStartNode].push_back(crossSection);
+      interpolatedCrossSections[branchStartNode].push_back(crossSection);
     }
   }
 }
@@ -222,13 +219,18 @@ std::vector<Mesh> Tree::generateMeshes() const {
     meshes.emplace_back(coords, util::delaunay(planarCoords));
 
     // mesh for interpolated strand particles
-    for (const auto& crossSection : interpolatedNodeParticles.at(i)) {
+    for (const auto& crossSection : interpolatedCrossSections.at(i)) {
       coords.clear();
       planarCoords.clear();
 
-      for (auto& [id, pos] : crossSection) {
-        coords.push_back(strands.at(id.first).getParticles().at(id.second)->pos);
-        planarCoords.emplace_back(pos.x, pos.y);
+      for (int j = 0; j < crossSection.getNumParticles(); ++j) {
+        int strandId = crossSection.particleStrandIds[j];
+        int index = crossSection.particleIndices[j];
+
+        coords.push_back(strands.at(strandId).getParticles().at(index)->pos);
+        planarCoords.emplace_back(
+            crossSection.particlePositions[j].x, crossSection.particlePositions[j].y
+        );
       }
 
       std::vector<glm::uvec3> indices = util::delaunay(planarCoords);
@@ -265,8 +267,11 @@ void Tree::renderInterpolatedParticles() const {
   std::vector<glm::vec3> positions;
   for (auto& [id, particles] : nodeParticles) {
     for (auto& particle : particles) positions.push_back(particle->pos);
-    for (auto& crossSection : interpolatedNodeParticles.at(id)) {
-      for (auto& particle : crossSection) positions.push_back(particle.second);
+    for (auto& crossSection : interpolatedCrossSections.at(id)) {
+      positions.insert(
+          positions.end(), crossSection.particlePositions.begin(),
+          crossSection.particlePositions.end()
+      );
     }
   };
 

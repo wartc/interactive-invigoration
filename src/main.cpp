@@ -93,13 +93,12 @@ int main(int argc, char** argv) {
   int id1 = pg.addNode({0.0f, 2.0f, 0.0f}, 0);
   int id2 = pg.addNode({-0.5f, 2.8f, 0.4f}, id1);
   int id3 = pg.addNode({0.9f, 3.3f, -0.4f}, id1);
-  int id4 = pg.addNode({1.0f, 3.8f, 0.4f}, id3);
+  int id4 = pg.addNode({1.0f, 4.8f, 0.4f}, id3);
   int id5 = pg.addNode({0.8f, 4.2f, -0.6f}, id3);
 
   Tree tree(pg);
 
   tree.computeStrandsPosition();
-  // tree.interpolateStrandParticles();
   tree.interpolateAllBranchSegments();
   // tree.printNodeParticles(0);
   auto meshes = tree.generateMeshes();
@@ -129,7 +128,6 @@ int main(int argc, char** argv) {
 
     sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
     for (auto& m : meshes) m.render();
-    tree.renderInterpolatedParticles();
     // tree.renderStrands();
 
     sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
