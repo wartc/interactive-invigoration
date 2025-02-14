@@ -197,6 +197,70 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
   }
 }
 
+Mesh Tree::generateMesh() const {
+  std::vector<glm::vec3> vertices;
+  std::vector<glm::uvec3> indices;
+
+  int vertexOffset = 0;
+  for (int i = 0; i < Node::getNodeCount(); ++i) {
+    // first: node particles (not interpolated)
+    for (int j = 0; j < nodeParticles.at(i).size(); ++j) {
+      vertices.push_back(nodeParticles.at(i)[j]->pos);
+    }
+
+    for (int j = 0; j < crossSectionsTriangulations.at({i, -1}).size(); ++j) {
+      indices.push_back(glm::uvec3(vertexOffset) + crossSectionsTriangulations.at({i, -1})[j]);
+    }
+
+    vertexOffset += nodeParticles.at(i).size();
+
+    // second: interpolated cross sections
+    for (int j = 0; j < interpolatedCrossSections.at(i).size(); ++j) {
+      for (int k = 0; k < interpolatedCrossSections.at(i)[j].getNumParticles(); ++k) {
+        int strandId = interpolatedCrossSections.at(i)[j].particleStrandIds[k];
+        int idx = interpolatedCrossSections.at(i)[j].particleIndices[k];
+
+        vertices.push_back(strands[strandId].getParticles()[idx]->pos);
+      }
+
+      for (int k = 0; k < crossSectionsTriangulations.at({i, j}).size(); ++k) {
+        indices.push_back(glm::uvec3(vertexOffset) + crossSectionsTriangulations.at({i, j})[k]);
+      }
+
+      vertexOffset += interpolatedCrossSections.at(i)[j].getNumParticles();
+    }
+  }
+
+  return Mesh{vertices, indices};
+}
+
+void Tree::triangulateCrossSections() {
+  for (int i = 0; i < Node::getNodeCount(); ++i) {
+    // mesh for not interpolated node particles
+    std::vector<glm::vec2> planarCoords;
+    for (auto& particle : nodeParticles.at(i)) {
+      planarCoords.emplace_back(particle->localPos);
+    }
+
+    crossSectionsTriangulations[{i, -1}] = util::delaunay(planarCoords);
+
+    // mesh for interpolated strand particles
+    int crossSectionIdx = 0;
+    for (const auto& crossSection : interpolatedCrossSections[i]) {
+      planarCoords.clear();
+
+      for (int j = 0; j < crossSection.getNumParticles(); ++j) {
+        planarCoords.emplace_back(
+            crossSection.particlePositions[j].x, crossSection.particlePositions[j].y
+        );
+      }
+
+      crossSectionsTriangulations[{i, crossSectionIdx}] = util::delaunay(planarCoords);
+      crossSectionIdx++;
+    }
+  }
+}
+
 /* ---------------------- DISPLAY METHODS ---------------------- */
 
 void Tree::printNodeParticles(int nodeId) const {
@@ -204,44 +268,6 @@ void Tree::printNodeParticles(int nodeId) const {
   for (auto& particle : nodeParticles.at(nodeId)) {
     std::cout << *particle << std::endl;
   }
-}
-
-std::vector<Mesh> Tree::generateMeshes() const {
-  std::vector<Mesh> meshes;
-  for (int i = 0; i < Node::getNodeCount(); ++i) {
-    // mesh for not interpolated node particles
-    std::vector<glm::vec3> coords;
-    std::vector<glm::vec2> planarCoords;
-    for (auto& particle : nodeParticles.at(i)) {
-      coords.emplace_back(particle->pos);
-      planarCoords.emplace_back(particle->localPos);
-    }
-    meshes.emplace_back(coords, util::delaunay(planarCoords));
-
-    // mesh for interpolated strand particles
-    for (const auto& crossSection : interpolatedCrossSections.at(i)) {
-      coords.clear();
-      planarCoords.clear();
-
-      for (int j = 0; j < crossSection.getNumParticles(); ++j) {
-        int strandId = crossSection.particleStrandIds[j];
-        int index = crossSection.particleIndices[j];
-
-        coords.push_back(strands.at(strandId).getParticles().at(index)->pos);
-        planarCoords.emplace_back(
-            crossSection.particlePositions[j].x, crossSection.particlePositions[j].y
-        );
-      }
-
-      std::vector<glm::uvec3> indices = util::delaunay(planarCoords);
-
-      for (auto& index : indices) {
-        meshes.emplace_back(coords, std::vector<glm::uvec3>{index});
-      }
-    }
-  }
-
-  return meshes;
 }
 
 void Tree::renderStrands() const {
@@ -254,36 +280,4 @@ void Tree::renderStrandParticles() const {
   for (auto& strand : strands) {
     strand.renderStrandParticles();
   }
-}
-
-void Tree::renderInterpolatedParticles() const {
-  unsigned int vao, vbo;
-  glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vbo);
-
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-  std::vector<glm::vec3> positions;
-  for (auto& [id, particles] : nodeParticles) {
-    for (auto& particle : particles) positions.push_back(particle->pos);
-    for (auto& crossSection : interpolatedCrossSections.at(id)) {
-      positions.insert(
-          positions.end(), crossSection.particlePositions.begin(),
-          crossSection.particlePositions.end()
-      );
-    }
-  };
-
-  glBufferData(
-      GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), &positions[0], GL_STATIC_DRAW
-  );
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-  glEnableVertexAttribArray(0);
-
-  glDrawArrays(GL_POINTS, 0, positions.size());
-
-  glBindVertexArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }

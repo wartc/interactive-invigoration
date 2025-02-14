@@ -38,6 +38,9 @@ class Tree {
 
   std::map<int, std::vector<CrossSection>> interpolatedCrossSections;
 
+  // maps a pair (node id, cross section index) to its corresponding triangle indices
+  std::map<std::pair<int, int>, std::vector<glm::uvec3>> crossSectionsTriangulations;
+
  public:
   Tree(PlantGraph& _pg) : pg{_pg} {}
 
@@ -46,12 +49,12 @@ class Tree {
   void interpolateAllBranchSegments();
 
   // mesh generation
-  std::vector<Mesh> generateMeshes() const;
+  void triangulateCrossSections();
+  Mesh generateMesh() const;
 
   // render methods
   void renderStrands() const;
   void renderStrandParticles() const;
-  void renderInterpolatedParticles() const;
 
   void printNodeParticles(int nodeId) const;
 
