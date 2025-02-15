@@ -14,22 +14,22 @@ class Mesh {
 
  public:
   Mesh(
-      const std::vector<glm::vec3>& _vertices, const std::vector<glm::vec3>& _normals,
-      const std::vector<glm::uvec3>& _indices
+      const std::vector<glm::vec3>& _vertices, const std::vector<glm::uvec3>& _indices,
+      const std::vector<glm::vec3>& _normals = {}
   )
       : vertices{_vertices}, normals{_normals}, indices{_indices} {
     init();
   }
 
   Mesh(
-      std::vector<glm::vec3>&& _vertices, std::vector<glm::vec3>&& _normals,
-      std::vector<glm::uvec3>&& _indices
+      std::vector<glm::vec3>&& _vertices, std::vector<glm::uvec3>&& _indices,
+      std::vector<glm::vec3>&& _normals = {}
   )
       : vertices{std::move(_vertices)}, normals{std::move(_normals)}, indices{std::move(_indices)} {
     init();
   }
 
-  void render();
+  void render() const;
 
  private:
   void init();

@@ -8,8 +8,8 @@
 
 #include "simulation/PBDConstraint.h"
 
-constexpr float GAMMA_ATTRACTION = 100.0f;
-constexpr int SOLVER_INTERATIONS = 100;
+constexpr float GAMMA_ATTRACTION = 50.0f;
+constexpr int SOLVER_INTERATIONS = 1000;
 
 // position based dynamics class
 // no masses are considered (w = m = 1)
@@ -20,19 +20,20 @@ class PBD {
   std::vector<glm::vec3> p{};
 
   std::vector<glm::vec3> attractors{};
-  CircularProfileConstraint boundaryConstraint;
-  CollisionConstraint collisionConstraint;
 
   float dt{};
   float kdamping{};
   float particleRadius{};
 
+  CollisionConstraint collisionConstraint;
+  CircularProfileConstraint boundaryConstraint;
+
  public:
   PBD(const std::vector<glm::vec3>& pos, const std::vector<glm::vec3>& attrs, float dampingFactor,
       float _dt, float particleRadius, glm::vec3 profileCenter, float profileRadius)
       : attractors{attrs},
-        kdamping{dampingFactor},
         dt{_dt},
+        kdamping{dampingFactor},
         particleRadius{particleRadius},
         collisionConstraint(PBDConstraint<2>::INEQUALITY, 1.0f, {}, particleRadius),
         boundaryConstraint(PBDConstraint<1>::INEQUALITY, 1.0f, {}, profileRadius, profileCenter) {

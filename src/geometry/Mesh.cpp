@@ -2,7 +2,7 @@
 
 #include <glad/glad.h>
 
-void Mesh::render() {
+void Mesh::render() const {
   glBindVertexArray(vao);
   glDrawElements(GL_TRIANGLES, indices.size() * 3, GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
@@ -16,10 +16,12 @@ void Mesh::init() {
     flatIndices.push_back(tri.z);
   }
 
+  bool hasNormals = normals.size() == vertices.size();
   std::vector<glm::vec3> interleavedVertexData;
   for (int i = 0; i < vertices.size(); ++i) {
     interleavedVertexData.push_back(vertices[i]);
-    interleavedVertexData.push_back(normals[i]);
+
+    if (hasNormals) interleavedVertexData.push_back(normals[i]);
   }
 
   glGenVertexArrays(1, &vao);
@@ -33,11 +35,15 @@ void Mesh::init() {
       GL_ARRAY_BUFFER, sizeof(glm::vec3) * interleavedVertexData.size(),
       interleavedVertexData.data(), GL_STATIC_DRAW
   );
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+
+  auto stride = hasNormals ? 2 * sizeof(glm::vec3) : sizeof(glm::vec3);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
   glEnableVertexAttribArray(0);
 
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
+  if (hasNormals) {
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)sizeof(glm::vec3));
+    glEnableVertexAttribArray(1);
+  }
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
   glBufferData(

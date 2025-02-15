@@ -25,7 +25,7 @@ class Spline {
 
   explicit Spline(std::vector<glm::vec3>&& points_) noexcept : points(std::move(points_)) {}
 
-  void render();
+  void render() const;
 
   // interpolate and update the `points` vector
   void smoothenSpline() { points = interpolate(points); }

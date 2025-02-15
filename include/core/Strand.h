@@ -7,6 +7,13 @@
 
 #include <glm/glm.hpp>
 
+#include "geometry/Mesh.h"
+#include "geometry/Spline.h"
+#include "Shader.h"
+
+constexpr int NUM_CIRCLE_VERTICES = 16;
+constexpr float STRAND_RADIUS = 0.01f;
+
 struct StrandParticle {
   int strandId{};
   bool interpolated{};
@@ -32,10 +39,25 @@ class Strand {
   inline static int ID_COUNTER = 0;
   std::vector<std::shared_ptr<StrandParticle>> particles;
 
+  // rendering
+  Spline spline;
+  std::unique_ptr<Mesh> generalizedCylinder;
+  glm::vec4 color;
+
  public:
   const int id;
 
-  explicit Strand() : id{ID_COUNTER++} {}
+  explicit Strand() : id{ID_COUNTER++} {
+    // use random color for each strand
+    // base color is RGB: (111, 186, 131), with a random perturbation
+    // for each channel, higher probability of increasing red & green channel
+
+    color = {
+        std::min(111.0f / 255.0f + (std::rand() % 40 - 10) / 255.0f, 1.0f),
+        std::min(186.0f / 255.0f + (std::rand() % 40 - 10) / 255.0f, 1.0f),
+        std::min(131.0f / 255.0f + (std::rand() % 20 - 10) / 255.0f, 1.0f), 1.0f
+    };
+  }
 
   static int getStrandCount() { return ID_COUNTER; }
 
@@ -44,8 +66,15 @@ class Strand {
   const std::vector<std::shared_ptr<StrandParticle>>& getParticles() const { return particles; }
 
   void interpolateParticles();
+
+  // render methods
+  void initializeSplineBuffers();
+  void renderSpline(const Shader& sh) const;
+
+  void initializeGeneralizedCylinder();
+  void renderStrand(const Shader& sh) const;
+
   void renderStrandParticles() const;
-  void renderStrand() const;
 
   friend std::ostream& operator<<(std::ostream& out, const Strand& strand) {
     out << "Strand ID: " << strand.id << ". Particles positions: " << std::endl;

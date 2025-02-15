@@ -1,7 +1,6 @@
 #ifndef __TREE_H__
 #define __TREE_H__
 
-#include <cstddef>
 #include <map>
 #include <memory>
 #include <vector>
@@ -9,11 +8,11 @@
 #include <glm/glm.hpp>
 
 #include "core/PlantGraph.h"
+#include "core/Shader.h"
 #include "core/Strand.h"
 #include "geometry/Mesh.h"
 
 constexpr int NUM_STRANDS_PER_LEAF = 10;
-constexpr float STRAND_RADIUS = 0.02f;
 constexpr float NODE_STRAND_AREA_RADIUS = 0.1f;
 constexpr glm::mat3 DEFAULT_COORDINATES{
     {1.0f, 0.0f,  0.0f},
@@ -55,7 +54,8 @@ class Tree {
   Mesh generateMesh() const;
 
   // render methods
-  void renderStrands() const;
+  void initializeStrandBuffers();
+  void renderStrands(const Shader& sh) const;
   void renderStrandParticles() const;
 
   void printNodeParticles(int nodeId) const;

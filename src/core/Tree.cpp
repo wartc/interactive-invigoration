@@ -46,7 +46,7 @@ void Tree::computeStrandsInNode(int nodeId) {
       Strand strand;
       auto particle = strand.addParticle(node.pos + currentFrontplane * particlePos, particlePos);
 
-      strands.push_back(strand);
+      strands.emplace_back(std::move(strand));
       nodeParticles[nodeId].push_back(particle);
     }
 
@@ -308,7 +308,7 @@ Mesh Tree::generateMesh() const {
     }
   }
 
-  return Mesh{vertices, normals, indices};
+  return Mesh{vertices, indices, normals};
 }
 
 void Tree::triangulateCrossSections() {
@@ -350,9 +350,15 @@ void Tree::printNodeParticles(int nodeId) const {
   }
 }
 
-void Tree::renderStrands() const {
+void Tree::initializeStrandBuffers() {
   for (auto& strand : strands) {
-    strand.renderStrand();
+    strand.initializeGeneralizedCylinder();
+  }
+}
+
+void Tree::renderStrands(const Shader& sh) const {
+  for (auto& strand : strands) {
+    strand.renderStrand(sh);
   }
 }
 

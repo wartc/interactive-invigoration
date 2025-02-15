@@ -43,7 +43,7 @@ glm::vec3 Spline::catmullRom(
   return a * (t * t * t) + b * (t * t) + m1 * t + p1;
 }
 
-void Spline::render() {
+void Spline::render() const {
   glBindVertexArray(vao);
   glDrawElements(GL_LINES, indices.size(), GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);

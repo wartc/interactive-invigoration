@@ -4,7 +4,7 @@ in vec3 fNormal;
 
 out vec4 fragColor;
 
-uniform vec4 splineColor;
+uniform vec4 color;
 uniform vec3 lightDir;
 uniform vec3 viewPos;
 
@@ -16,10 +16,10 @@ void main() {
     vec3 norm = normalize(fNormal);
     vec3 L = normalize(lightDir);
     
-    vec3 ambient = ambientStrength * splineColor.rgb;
+    vec3 ambient = ambientStrength * color.rgb;
     
     float diff = max(dot(norm, L), 0.0);
-    vec3 diffuse = diff * splineColor.rgb;
+    vec3 diffuse = diff * color.rgb;
 
     vec3 viewDir = normalize(viewPos);
     vec3 reflectDir = reflect(-L, norm);
@@ -27,5 +27,5 @@ void main() {
     vec3 specular = specularStrength * spec * vec3(1.0);
     
     vec3 finalColor = ambient + diffuse + specular;
-    fragColor = vec4(finalColor, splineColor.a);
+    fragColor = vec4(finalColor, color.a);
 }

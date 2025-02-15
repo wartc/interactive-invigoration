@@ -99,11 +99,11 @@ int main(int argc, char** argv) {
 
   tree.computeStrandsPosition();
   tree.interpolateAllBranchSegments();
-  // tree.printNodeParticles(0);
+
   tree.triangulateCrossSections();
   auto mesh = tree.generateMesh();
 
-  // tree.printNodeStrands();
+  tree.initializeStrandBuffers();
 
   Shader sh("shaders/basic.vert", "shaders/basic.frag");
 
@@ -126,15 +126,14 @@ int main(int argc, char** argv) {
     sh.setMat4("view", camera.getViewMatrix());
     sh.setMat4("model", glm::mat4(1.0f));
 
-    sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
+    // sh.setVec4("color", {0.70f, 0.98f, 0.64f, 1.0f});
     // sh.setVec3("lightDir", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
     // sh.setVec3("viewPos", camera.getPosition());
 
-    mesh.render();
+    // mesh.render();
 
-    sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
-    tree.renderStrandParticles();
-    // tree.renderStrands();
+    // sh.setVec4("color", {1.0f, 0.0f, 0.0f, 1.0f});
+    tree.renderStrands(sh);
 
     // glfw processes
     glfwSwapBuffers(window);

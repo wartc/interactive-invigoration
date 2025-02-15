@@ -2,8 +2,8 @@
 
 out vec4 fragColor;
 
-uniform vec4 splineColor;
+uniform vec4 color;
 
 void main() {
-  fragColor = splineColor;
+  fragColor = color;
 }
