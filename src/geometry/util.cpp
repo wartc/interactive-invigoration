@@ -49,7 +49,7 @@ std::pair<glm::vec3, glm::vec3> util::computeLeastSquaresFittingPlane(
 std::vector<glm::uvec3> util::delaunay(const std::vector<glm::vec2>& vertices) {
   std::vector<glm::uvec3> triangles;
 
-  assert(vertices.size() > 3);
+  assert(vertices.size() >= 3);
 
   // convert glm::vec2 vertices to CGAL points
   std::vector<CGALPoint2> points;

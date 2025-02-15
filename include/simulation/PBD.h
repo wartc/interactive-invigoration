@@ -8,8 +8,8 @@
 
 #include "simulation/PBDConstraint.h"
 
-constexpr float GAMMA_ATTRACTION = 120.0f;
-constexpr int SOLVER_INTERATIONS = 250;
+constexpr float GAMMA_ATTRACTION = 500.0f;
+constexpr int SOLVER_INTERATIONS = 50;
 
 // position based dynamics class
 // no masses are considered (w = m = 1)

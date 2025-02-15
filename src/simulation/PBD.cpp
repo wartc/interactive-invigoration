@@ -40,17 +40,17 @@ void PBD::simulate() {
     p[i] = x[i] + dt * v[i];
   }
 
-  std::set<std::pair<int, int>> mcoll;
-  for (int i = 0; i < p.size() - 1; ++i) {
-    for (int j = i + 1; j < p.size(); ++j) {
-      glm::vec3 u = p[i] - p[j];
-      if (glm::length(u) < 2 * particleRadius) {
-        mcoll.insert(std::make_pair(i, j));
+  for (int i = 0; i < SOLVER_INTERATIONS; ++i) {
+    std::set<std::pair<int, int>> mcoll;
+    for (int i = 0; i < p.size() - 1; ++i) {
+      for (int j = i + 1; j < p.size(); ++j) {
+        glm::vec3 u = p[i] - p[j];
+        if (glm::length(u) < 2 * particleRadius) {
+          mcoll.insert(std::make_pair(i, j));
+        }
       }
     }
-  }
 
-  for (int i = 0; i < SOLVER_INTERATIONS; ++i) {
     solve(mcoll);
   }
 
@@ -86,6 +86,7 @@ void PBD::solve(const std::set<std::pair<int, int>>& mcoll) {
   // collision constraints
   for (auto& [i, j] : mcoll) {
     collisionConstraint.setPoints({p[i], p[j]});
+
     if (!collisionConstraint.isSatisfied()) {
       auto correction = collisionConstraint.computeCorrection();
       p[i] += correction[0];
