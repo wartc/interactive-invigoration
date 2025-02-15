@@ -25,6 +25,7 @@ struct CrossSection {
   std::vector<glm::vec3> particlePositions{};
   std::vector<int> particleStrandIds{};
   std::vector<int> particleIndices{};
+  std::vector<int> boundaryVertices{};
 
   int getNumParticles() const { return particlePositions.size(); }
 };

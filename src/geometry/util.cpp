@@ -79,3 +79,84 @@ std::vector<glm::uvec3> util::delaunay(const std::vector<glm::vec2>& vertices) {
 
   return triangles;
 }
+
+std::vector<int> util::computeBoundaryVertices(
+    const std::vector<glm::vec2>& planarCoords, const std::vector<glm::uvec3>& triangles
+) {
+  std::map<std::pair<int, int>, int> edgeCount;
+  std::vector<std::pair<int, int>> boundaryEdges;
+
+  for (const auto& tri : triangles) {
+    std::vector<std::pair<int, int>> edges = {
+        {tri.x, tri.y},
+        {tri.y, tri.z},
+        {tri.z, tri.x}
+    };
+    for (const auto& edge : edges) {
+      auto sortedEdge =
+          std::make_pair(std::min(edge.first, edge.second), std::max(edge.first, edge.second));
+      edgeCount[sortedEdge]++;
+    }
+  }
+
+  // group unsorted boundary edges
+  for (const auto& tri : triangles) {
+    std::vector<std::pair<int, int>> edges = {
+        {tri.x, tri.y},
+        {tri.y, tri.z},
+        {tri.z, tri.x}
+    };
+    for (const auto& edge : edges) {
+      auto sortedEdge =
+          std::make_pair(std::min(edge.first, edge.second), std::max(edge.first, edge.second));
+      if (edgeCount[sortedEdge] == 1) {
+        boundaryEdges.push_back(edge);  // store original edge direction
+      }
+    }
+  }
+
+  // reconstruct the boundary loop
+  if (boundaryEdges.empty()) return {};
+
+  std::vector<int> boundaryLoop;
+  int currentVertex = boundaryEdges[0].first;
+  int nextVertex = boundaryEdges[0].second;
+  boundaryLoop.push_back(currentVertex);
+  boundaryLoop.push_back(nextVertex);
+
+  boundaryEdges.erase(boundaryEdges.begin());
+
+  while (!boundaryEdges.empty() && nextVertex != boundaryLoop[0]) {
+    for (size_t i = 0; i < boundaryEdges.size(); ++i) {
+      if (boundaryEdges[i].first == nextVertex) {
+        currentVertex = boundaryEdges[i].first;
+        nextVertex = boundaryEdges[i].second;
+
+        boundaryLoop.push_back(nextVertex);
+        boundaryEdges.erase(boundaryEdges.begin() + i);
+        break;
+      } else if (boundaryEdges[i].second == nextVertex) {
+        currentVertex = boundaryEdges[i].second;
+        nextVertex = boundaryEdges[i].first;
+
+        boundaryLoop.push_back(nextVertex);
+        boundaryEdges.erase(boundaryEdges.begin() + i);
+        break;
+      }
+    }
+  }
+
+  // CCW order using the polygon area sign
+  float area = 0.0f;
+  for (size_t i = 0; i < boundaryLoop.size(); ++i) {
+    const glm::vec2& p1 = planarCoords[boundaryLoop[i]];
+    const glm::vec2& p2 = planarCoords[boundaryLoop[(i + 1) % boundaryLoop.size()]];
+    area += (p2.x - p1.x) * (p2.y + p1.y);
+  }
+
+  if (area > 0) {  // CW if area is positive
+    std::reverse(boundaryLoop.begin(), boundaryLoop.end());
+  }
+
+  return boundaryLoop;
+}

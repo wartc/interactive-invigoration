@@ -202,32 +202,96 @@ Mesh Tree::generateMesh() const {
   std::vector<glm::uvec3> indices;
 
   int vertexOffset = 0;
-  for (int i = 0; i < Node::getNodeCount(); ++i) {
+  for (int nodeId = 0; nodeId < Node::getNodeCount(); ++nodeId) {
     // first: node particles (not interpolated)
-    for (int j = 0; j < nodeParticles.at(i).size(); ++j) {
-      vertices.push_back(nodeParticles.at(i)[j]->pos);
+    const auto& nodeParts = nodeParticles.at(nodeId);
+    for (const auto& particle : nodeParts) {
+      vertices.push_back(particle->pos);
     }
 
-    for (int j = 0; j < crossSectionsTriangulations.at({i, -1}).size(); ++j) {
-      indices.push_back(glm::uvec3(vertexOffset) + crossSectionsTriangulations.at({i, -1})[j]);
-    }
+    // for (const auto& triangle : crossSectionsTriangulations.at({nodeId, -1})) {
+    //   indices.push_back(glm::uvec3(vertexOffset) + triangle);
+    // }
 
-    vertexOffset += nodeParticles.at(i).size();
+    vertexOffset += nodeParts.size();
 
     // second: interpolated cross sections
-    for (int j = 0; j < interpolatedCrossSections.at(i).size(); ++j) {
-      for (int k = 0; k < interpolatedCrossSections.at(i)[j].getNumParticles(); ++k) {
-        int strandId = interpolatedCrossSections.at(i)[j].particleStrandIds[k];
-        int idx = interpolatedCrossSections.at(i)[j].particleIndices[k];
+    for (int crossIdx = 0; crossIdx < interpolatedCrossSections.at(nodeId).size(); ++crossIdx) {
+      const auto& curCrossSection = interpolatedCrossSections.at(nodeId)[crossIdx];
+      const int crossSectionSize = curCrossSection.getNumParticles();
+
+      // add the particle positions to the vertices
+      for (int i = 0; i < crossSectionSize; ++i) {
+        int strandId = curCrossSection.particleStrandIds[i];
+        int idx = curCrossSection.particleIndices[i];
 
         vertices.push_back(strands[strandId].getParticles()[idx]->pos);
       }
 
-      for (int k = 0; k < crossSectionsTriangulations.at({i, j}).size(); ++k) {
-        indices.push_back(glm::uvec3(vertexOffset) + crossSectionsTriangulations.at({i, j})[k]);
+      // actual cross section triangulation
+      // for (const auto& triangle : crossSectionsTriangulations.at({nodeId, crossIdx})) {
+      //   indices.push_back(glm::uvec3(vertexOffset) + triangle);
+      // }
+
+      std::cout << "Interpolated cross section at node: " << nodeId << " with index: " << crossIdx
+                << std::endl;
+
+      // connect the cross section with the previous one
+      CrossSection previousCrossSection;
+      if (crossIdx == 0) {
+        // connect with the last node particles if this is the first cross section
+        for (int i = 0; i < nodeParts.size(); ++i) {
+          previousCrossSection.particlePositions.push_back(nodeParts[i]->pos);
+          previousCrossSection.particleStrandIds.push_back(nodeParts[i]->strandId);
+        }
+      } else {
+        previousCrossSection = interpolatedCrossSections.at(nodeId)[crossIdx - 1];
       }
 
-      vertexOffset += interpolatedCrossSections.at(i)[j].getNumParticles();
+      // connect the previous boundary particles with corresponding strand ids
+      // search the previous cross section particleStrandIds for the current strandId
+      int curBoundaryIdx = 0;
+      for (int i : curCrossSection.boundaryVertices) {
+        curBoundaryIdx++;
+        int strandId = curCrossSection.particleStrandIds[i];
+
+        int matchingVertex = -1;
+        int matchingIdx = 0;
+        for (int j : previousCrossSection.boundaryVertices) {
+          if (previousCrossSection.particleStrandIds[j] == strandId) {
+            matchingVertex = j;
+            break;
+          }
+          matchingIdx++;
+        }
+
+        std::cout << "Connecting strandId: " << strandId << " at current index: " << i
+                  << " with previous index: " << matchingVertex << std::endl;
+
+        if (matchingVertex == -1) {
+          std::cerr << "Error: could not find corresponding strandId in previous cross section"
+                    << std::endl;
+          continue;
+        }
+
+        int prevOffset = vertexOffset - previousCrossSection.getNumParticles();
+        int nextCurBoundaryIdx = (curBoundaryIdx) % curCrossSection.boundaryVertices.size();
+        int nextMatchingIdx = (matchingIdx + 1) % previousCrossSection.boundaryVertices.size();
+        int afterCurrent = curCrossSection.boundaryVertices[nextCurBoundaryIdx];
+        int afterMatching = previousCrossSection.boundaryVertices[nextMatchingIdx];
+
+        indices.emplace_back(
+            vertexOffset + i, prevOffset + matchingVertex, prevOffset + afterMatching
+        );
+        indices.emplace_back(
+            vertexOffset + i, prevOffset + afterMatching, vertexOffset + afterCurrent
+        );
+      }
+
+      // @TODO: for the last cross section, connect with next node particles with corresponding
+      // strand ids
+
+      vertexOffset += crossSectionSize;
     }
   }
 
@@ -246,7 +310,7 @@ void Tree::triangulateCrossSections() {
 
     // mesh for interpolated strand particles
     int crossSectionIdx = 0;
-    for (const auto& crossSection : interpolatedCrossSections[i]) {
+    for (auto& crossSection : interpolatedCrossSections[i]) {
       planarCoords.clear();
 
       for (int j = 0; j < crossSection.getNumParticles(); ++j) {
@@ -255,7 +319,10 @@ void Tree::triangulateCrossSections() {
         );
       }
 
-      crossSectionsTriangulations[{i, crossSectionIdx}] = util::delaunay(planarCoords);
+      auto triangles = util::delaunay(planarCoords);
+      crossSectionsTriangulations[{i, crossSectionIdx}] = triangles;
+      crossSection.boundaryVertices = util::computeBoundaryVertices(planarCoords, triangles);
+
       crossSectionIdx++;
     }
   }

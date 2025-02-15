@@ -14,6 +14,10 @@ std::pair<glm::vec3, glm::vec3> computeLeastSquaresFittingPlane(
 
 std::vector<glm::uvec3> delaunay(const std::vector<glm::vec2>& vertices);
 
+std::vector<int> computeBoundaryVertices(
+    const std::vector<glm::vec2>& planarCoords, const std::vector<glm::uvec3>& triangles
+);
+
 };  // namespace util
 
 #endif

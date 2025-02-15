@@ -129,9 +129,9 @@ int main(int argc, char** argv) {
     sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
 
     mesh.render();
-    // tree.renderStrands();
 
     sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
+    tree.renderStrands();
     // tree.renderStrandParticles();
 
     // glfw processes
