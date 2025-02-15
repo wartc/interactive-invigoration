@@ -47,10 +47,9 @@ class Tree {
 
   // strand position computation
   void computeStrandsPosition();
-  void interpolateAllBranchSegments();
 
   // mesh generation
-  void triangulateCrossSections();
+  void computeCrossSections();
   Mesh generateMesh() const;
 
   // render methods
@@ -63,8 +62,12 @@ class Tree {
  private:
   void computeStrandsInNode(int nodeId);
   void computeCoordinateSystems();
+
+  // pbd simulation
   void applyPBD();
 
+  // mesh preprocessing
+  void triangulateCrossSections();
   void interpolateBranchSegment(int branchStartNode);
 };
 

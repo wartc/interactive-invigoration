@@ -98,9 +98,8 @@ int main(int argc, char** argv) {
   Tree tree(pg);
 
   tree.computeStrandsPosition();
-  tree.interpolateAllBranchSegments();
+  tree.computeCrossSections();
 
-  tree.triangulateCrossSections();
   auto mesh = tree.generateMesh();
 
   tree.initializeStrandBuffers();
@@ -130,10 +129,10 @@ int main(int argc, char** argv) {
     // sh.setVec3("lightDir", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
     // sh.setVec3("viewPos", camera.getPosition());
 
-    // mesh.render();
+    mesh.render();
 
     // sh.setVec4("color", {1.0f, 0.0f, 0.0f, 1.0f});
-    tree.renderStrands(sh);
+    // tree.renderStrands(sh);
 
     // glfw processes
     glfwSwapBuffers(window);

@@ -143,9 +143,10 @@ void Tree::applyPBD() {
   }
 }
 
-void Tree::interpolateAllBranchSegments() {
+void Tree::computeCrossSections() {
   for (int i = 0; i < Strand::getStrandCount(); ++i) strands[i].interpolateParticles();
   for (int i = 0; i < Node::getNodeCount(); ++i) interpolateBranchSegment(i);
+  triangulateCrossSections();
 }
 
 void Tree::interpolateBranchSegment(int branchStartNode) {
