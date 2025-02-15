@@ -122,9 +122,7 @@ void Tree::applyPBD() {
   std::vector<glm::vec3> attractors{
       {0.0f, 0.0f, 0.0f}
   };
-  PBD pbd(
-      {}, attractors, 0.02, 0.002, STRAND_RADIUS, {0.0f, 0.0f, 0.0f}, 0.5 * NODE_STRAND_AREA_RADIUS
-  );
+  PBD pbd({}, attractors, 0.02, 0.002, STRAND_RADIUS, {0.0f, 0.0f, 0.0f}, NODE_STRAND_AREA_RADIUS);
 
   for (auto& [nodeId, particles] : nodeParticles) {
     std::vector<glm::vec3> pos;
@@ -133,7 +131,9 @@ void Tree::applyPBD() {
 
     // execute pbd for every node, to "pack" the strands, without intersections
     pbd.setPoints(pos);
-    pos = pbd.execute(5 * Strand::getStrandCount());
+    pos = pbd.execute(
+        5 * Strand::getStrandCount(), {0.0f, 0.0f, 0.0f}, 0.1 * pos.size() * NODE_STRAND_AREA_RADIUS
+    );
 
     // set the strand particles position after running the PBD simulation
     for (int i = 0; i < particles.size(); ++i) {

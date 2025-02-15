@@ -7,9 +7,13 @@
 
 #include "simulation/PBDConstraint.h"
 
-std::vector<glm::vec3> PBD::execute(int iterations) {
+std::vector<glm::vec3> PBD::execute(int iterations, glm::vec3 profileCenter, float profileRadius) {
   std::fill(v.begin(), v.end(), glm::vec3{0.0f, 0.0f, 0.0f});
   std::fill(p.begin(), p.end(), glm::vec3{0.0f, 0.0f, 0.0f});
+
+  boundaryConstraint = CircularProfileConstraint(
+      PBDConstraint<1>::INEQUALITY, 1.0f, {}, profileRadius, profileCenter
+  );
 
   for (int i = 0; i < iterations; ++i) {
     simulate();
@@ -21,6 +25,11 @@ std::vector<glm::vec3> PBD::execute(int iterations) {
 void PBD::simulate() {
   for (int i = 0; i < x.size(); ++i) {
     v[i] += computeExternalForces(i);
+
+    // max velocity = 10
+    if (glm::length(v[i]) > 10.0f) {
+      v[i] = 10.0f * glm::normalize(v[i]);
+    }
   }
 
   // optionally damp velocities, according to PBD paper (ex.: to maintain rigid body constraints)
@@ -35,7 +44,7 @@ void PBD::simulate() {
   for (int i = 0; i < p.size() - 1; ++i) {
     for (int j = i + 1; j < p.size(); ++j) {
       glm::vec3 u = p[i] - p[j];
-      if (glm::dot(u, u) < particleRadius * particleRadius) {
+      if (glm::length(u) < 2 * particleRadius) {
         mcoll.insert(std::make_pair(i, j));
       }
     }

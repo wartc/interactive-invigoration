@@ -8,8 +8,8 @@
 
 #include "simulation/PBDConstraint.h"
 
-constexpr float GAMMA_ATTRACTION = 50.0f;
-constexpr int SOLVER_INTERATIONS = 1000;
+constexpr float GAMMA_ATTRACTION = 120.0f;
+constexpr int SOLVER_INTERATIONS = 250;
 
 // position based dynamics class
 // no masses are considered (w = m = 1)
@@ -40,7 +40,7 @@ class PBD {
     setPoints(pos);
   }
 
-  std::vector<glm::vec3> execute(int iterations);
+  std::vector<glm::vec3> execute(int iterations, glm::vec3 profileCenter, float profileRadius);
 
   void setPoints(const std::vector<glm::vec3>& points) {
     x = points;

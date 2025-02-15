@@ -12,7 +12,7 @@
 #include "Shader.h"
 
 constexpr int NUM_CIRCLE_VERTICES = 16;
-constexpr float STRAND_RADIUS = 0.01f;
+constexpr float STRAND_RADIUS = 0.0075f;
 
 struct StrandParticle {
   int strandId{};

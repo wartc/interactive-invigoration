@@ -11,9 +11,9 @@ class PBDConstraint {
   enum ConstraintType { EQUALITY, INEQUALITY };
 
  protected:
-  std::array<glm::vec3, N> points;
   ConstraintType type;
   float stiffness;
+  std::array<glm::vec3, N> points;
 
  public:
   PBDConstraint(ConstraintType _type, float _stiffness, const std::array<glm::vec3, N>& _points)
@@ -49,18 +49,18 @@ class CollisionConstraint : public PBDConstraint<2> {
     float k = 1 - std::pow(1 - stiffness, 0.5f);
 
     return {
-        (-(len - pointRadius) * (u / len)) * k,  //
-        ((len - pointRadius) * (u / len)) * k    //
+        ((len - pointRadius) * (u / len)) * k,  //
+        (-(len - pointRadius) * (u / len)) * k  //
     };
   }
 
-  float evaluate() const override { return glm::length(points[0] - points[1]) - pointRadius; }
+  float evaluate() const override { return glm::length(points[0] - points[1]) - (2 * pointRadius); }
 };
 
 class CircularProfileConstraint : public PBDConstraint<1> {
  private:
-  glm::vec3 center;
   float radius;
+  glm::vec3 center;
 
  public:
   CircularProfileConstraint(
