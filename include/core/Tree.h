@@ -23,6 +23,7 @@ constexpr glm::mat3 DEFAULT_COORDINATES{
 
 struct CrossSection {
   std::vector<glm::vec3> particlePositions{};
+  std::vector<glm::vec3> particleNormals{};
   std::vector<int> particleStrandIds{};
   std::vector<int> particleIndices{};
   std::vector<int> boundaryVertices{};

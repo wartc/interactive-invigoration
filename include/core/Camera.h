@@ -40,6 +40,8 @@ class Camera {
     updateVectors();
   }
 
+  glm::vec3 getPosition() const { return pos; }
+
   glm::mat4 getViewMatrix() { return glm::lookAt(pos, pos + front, up); }
 
   glm::mat4 getProjectionMatrix() {

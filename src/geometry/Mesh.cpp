@@ -16,6 +16,12 @@ void Mesh::init() {
     flatIndices.push_back(tri.z);
   }
 
+  std::vector<glm::vec3> interleavedVertexData;
+  for (int i = 0; i < vertices.size(); ++i) {
+    interleavedVertexData.push_back(vertices[i]);
+    interleavedVertexData.push_back(normals[i]);
+  }
+
   glGenVertexArrays(1, &vao);
   glGenBuffers(1, &vbo);
   glGenBuffers(1, &ebo);
@@ -24,17 +30,20 @@ void Mesh::init() {
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(
-      GL_ARRAY_BUFFER, sizeof(glm::vec3) * vertices.size(), vertices.data(), GL_STATIC_DRAW
+      GL_ARRAY_BUFFER, sizeof(glm::vec3) * interleavedVertexData.size(),
+      interleavedVertexData.data(), GL_STATIC_DRAW
   );
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
   glBufferData(
       GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * flatIndices.size(), flatIndices.data(),
       GL_STATIC_DRAW
   );
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);

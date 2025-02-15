@@ -127,12 +127,14 @@ int main(int argc, char** argv) {
     sh.setMat4("model", glm::mat4(1.0f));
 
     sh.setVec4("splineColor", {0.70f, 0.98f, 0.64f, 1.0f});
+    // sh.setVec3("lightDir", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
+    // sh.setVec3("viewPos", camera.getPosition());
 
     mesh.render();
 
     sh.setVec4("splineColor", {1.0f, 0.0f, 0.0f, 1.0f});
-    tree.renderStrands();
-    // tree.renderStrandParticles();
+    tree.renderStrandParticles();
+    // tree.renderStrands();
 
     // glfw processes
     glfwSwapBuffers(window);

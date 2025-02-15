@@ -177,6 +177,13 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
       std::tie(planeOrigin, planeNormal) =
           util::computeLeastSquaresFittingPlane(crossSection.particlePositions);
 
+      crossSection.particleNormals.resize(crossSection.getNumParticles());
+      glm::vec3 centroid{0.0f};
+      for (int j = 0; j < crossSection.getNumParticles(); ++j) {
+        centroid += glm::vec3(crossSection.particlePositions[j]);
+      }
+      centroid /= crossSection.getNumParticles();
+
       // construct orthonormal basis
       glm::vec3 xaxis = glm::normalize(crossSection.particlePositions[0] - planeOrigin);
       xaxis = glm::normalize(xaxis - glm::dot(xaxis, planeNormal) * planeNormal);
@@ -189,6 +196,9 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
         glm::vec3 projected =
             crossSection.particlePositions[j] - glm::dot(v, planeNormal) * planeNormal;
         glm::vec3 local = glm::transpose(basis) * (projected - planeOrigin);
+
+        crossSection.particleNormals[j] =
+            glm::normalize(crossSection.particlePositions[j] - centroid);
         crossSection.particlePositions[j] = glm::vec3(local.x, local.y, 0.0f);
       }
 
@@ -199,6 +209,7 @@ void Tree::interpolateBranchSegment(int branchStartNode) {
 
 Mesh Tree::generateMesh() const {
   std::vector<glm::vec3> vertices;
+  std::vector<glm::vec3> normals;
   std::vector<glm::uvec3> indices;
 
   int vertexOffset = 0;
@@ -207,11 +218,12 @@ Mesh Tree::generateMesh() const {
     const auto& nodeParts = nodeParticles.at(nodeId);
     for (const auto& particle : nodeParts) {
       vertices.push_back(particle->pos);
+      normals.push_back(glm::normalize(particle->pos - pg.getNode(nodeId).pos));
     }
 
-    // for (const auto& triangle : crossSectionsTriangulations.at({nodeId, -1})) {
-    //   indices.push_back(glm::uvec3(vertexOffset) + triangle);
-    // }
+    for (const auto& triangle : crossSectionsTriangulations.at({nodeId, -1})) {
+      indices.push_back(glm::uvec3(vertexOffset) + triangle);
+    }
 
     vertexOffset += nodeParts.size();
 
@@ -226,12 +238,13 @@ Mesh Tree::generateMesh() const {
         int idx = curCrossSection.particleIndices[i];
 
         vertices.push_back(strands[strandId].getParticles()[idx]->pos);
+        normals.push_back(curCrossSection.particleNormals[i]);
       }
 
       // actual cross section triangulation
-      // for (const auto& triangle : crossSectionsTriangulations.at({nodeId, crossIdx})) {
-      //   indices.push_back(glm::uvec3(vertexOffset) + triangle);
-      // }
+      for (const auto& triangle : crossSectionsTriangulations.at({nodeId, crossIdx})) {
+        indices.push_back(glm::uvec3(vertexOffset) + triangle);
+      }
 
       std::cout << "Interpolated cross section at node: " << nodeId << " with index: " << crossIdx
                 << std::endl;
@@ -295,7 +308,7 @@ Mesh Tree::generateMesh() const {
     }
   }
 
-  return Mesh{vertices, indices};
+  return Mesh{vertices, normals, indices};
 }
 
 void Tree::triangulateCrossSections() {

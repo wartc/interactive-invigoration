@@ -12,10 +12,10 @@
 
 using DelaunayK = CGAL::Exact_predicates_inexact_constructions_kernel;
 using Delaunay = CGAL::Delaunay_triangulation_2<DelaunayK>;
-using Point = DelaunayK::Point_2;
+using CGALPoint2 = DelaunayK::Point_2;
 
 using CartesianK = CGAL::Simple_cartesian<double>;
-using CGALPoint = CartesianK::Point_3;
+using CGALPoint3 = CartesianK::Point_3;
 using CGALPlane = CartesianK::Plane_3;
 
 std::pair<glm::vec3, glm::vec3> util::computeLeastSquaresFittingPlane(
@@ -26,7 +26,7 @@ std::pair<glm::vec3, glm::vec3> util::computeLeastSquaresFittingPlane(
   }
 
   // convert glm::vec3 points to CGAL points
-  std::vector<CGALPoint> cgal_points;
+  std::vector<CGALPoint3> cgal_points;
   for (const auto& v : vertices) {
     cgal_points.emplace_back(v.x, v.y, v.z);
   }
@@ -52,9 +52,9 @@ std::vector<glm::uvec3> util::delaunay(const std::vector<glm::vec2>& vertices) {
   assert(vertices.size() > 3);
 
   // convert glm::vec2 vertices to CGAL points
-  std::vector<Point> points;
+  std::vector<CGALPoint2> points;
   for (const auto& v : vertices) {
-    points.push_back(Point(v.x, v.y));
+    points.push_back(CGALPoint2(v.x, v.y));
   }
 
   // delaunay triangulation
