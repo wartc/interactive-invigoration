@@ -13,6 +13,8 @@ constexpr unsigned int WINDOW_WIDTH = 1920, WINDOW_HEIGHT = WINDOW_WIDTH / ASPEC
 
 // control
 bool g_wireframeActive = false;
+bool g_showMesh = false;
+bool g_showStrands = true;
 bool g_rotatingCamera = false;
 bool g_panningCamera = false;
 
@@ -125,13 +127,15 @@ int main(int argc, char** argv) {
     sh.setMat4("view", camera.getViewMatrix());
     sh.setMat4("model", glm::mat4(1.0f));
 
-    // sh.setVec3("lightDir", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
-    // sh.setVec3("viewPos", camera.getPosition());
+    if (g_showMesh) {
+      sh.setVec3("lightDir", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
+      sh.setVec3("viewPos", camera.getPosition());
+      mesh.render();
+    }
 
-    // sh.setVec4("color", {1.0f, 0.0f, 0.64f, 1.0f});
-    // mesh.render();
-
-    tree.renderStrands(sh);
+    if (g_showStrands) {
+      tree.renderStrands(sh);
+    }
 
     // glfw processes
     glfwSwapBuffers(window);
@@ -159,16 +163,37 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-  if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE) {
-    glfwSetWindowShouldClose(window, true);
-  }
-
-  if (action == GLFW_PRESS && key == GLFW_KEY_F) {
-    if (g_wireframeActive)
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    else
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    g_wireframeActive = !g_wireframeActive;
+  if (action == GLFW_PRESS) {
+    switch (key) {
+      case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, true); break;
+      case GLFW_KEY_F:
+        // Toggle wireframe mode
+        g_wireframeActive = !g_wireframeActive;
+        glPolygonMode(GL_FRONT_AND_BACK, g_wireframeActive ? GL_LINE : GL_FILL);
+        break;
+      case GLFW_KEY_H:
+        // Display help message
+        std::cout << "\n=== Controls ===\n"
+                  << "H - Show this help message\n"
+                  << "M - Toggle mesh visualization\n"
+                  << "T - Toggle strands visualization\n"
+                  << "F - Toggle wireframe mode\n"
+                  << "WASD - Move camera position\n"
+                  << "Middle Mouse Drag - Rotate camera\n"
+                  << "Right Mouse Drag - Pan camera\n"
+                  << "Scroll Wheel - Zoom in/out\n"
+                  << "ESC - Exit program\n\n";
+        break;
+      case GLFW_KEY_M:
+        g_showMesh = !g_showMesh;
+        std::cout << "Mesh visualization: " << (g_showMesh ? "ON" : "OFF") << "\n";
+        break;
+      case GLFW_KEY_T:
+        g_showStrands = !g_showStrands;
+        std::cout << "Strand visualization: " << (g_showStrands ? "ON" : "OFF") << "\n";
+        break;
+      default: break;
+    }
   }
 }
 

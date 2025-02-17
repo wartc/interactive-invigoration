@@ -361,3 +361,32 @@ void Tree::renderStrandParticles() const {
     strand.renderStrandParticles();
   }
 }
+
+// void Tree::renderCoordinateSystems(const Shader& sh) const {
+//   // generate a 2 point spline with each of the coordinate system axes (frontplanes)
+//   for (int i = 0; i < Node::getNodeCount(); ++i) {
+//     const Node& node = pg.getNode(i);
+//     const glm::mat3& frontplane = frontplanes.at(i);
+
+//     // x-axis
+//     Spline xaxisSpline({node.pos, node.pos + frontplane[0] * 0.5f});
+
+//     // y-axis
+//     Spline yaxisSpline({node.pos, node.pos + frontplane[1] * 0.5f});
+
+//     // z-axis
+//     Spline zaxisSpline({node.pos, node.pos + frontplane[2] * 0.5f});
+
+//     sh.setVec4("color", {1.0f, 0.0f, 0.0f, 1.0f});
+//     xaxisSpline.initializeBuffers();
+//     xaxisSpline.render();
+
+//     sh.setVec4("color", {0.0f, 1.0f, 0.0f, 1.0f});
+//     yaxisSpline.initializeBuffers();
+//     yaxisSpline.render();
+
+//     sh.setVec4("color", {0.0f, 0.0f, 1.0f, 1.0f});
+//     zaxisSpline.initializeBuffers();
+//     zaxisSpline.render();
+//   }
+// }

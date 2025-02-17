@@ -56,6 +56,7 @@ class Tree {
   void initializeStrandBuffers();
   void renderStrands(const Shader& sh) const;
   void renderStrandParticles() const;
+  // void renderCoordinateSystems(const Shader& sh) const;
 
   void printNodeParticles(int nodeId) const;
 
