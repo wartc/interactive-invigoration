@@ -15,7 +15,7 @@
 
 void Tree::computeStrandsPosition() {
   time_t t = time(nullptr);
-  std::cout << "random seed: " << t << std::endl;
+  // std::cout << "random seed: " << t << std::endl;
   std::srand(t);
 
   computeCoordinateSystems();
@@ -247,9 +247,6 @@ Mesh Tree::generateMesh() const {
         indices.push_back(glm::uvec3(vertexOffset) + triangle);
       }
 
-      std::cout << "Interpolated cross section at node: " << nodeId << " with index: " << crossIdx
-                << std::endl;
-
       // connect the cross section with the previous one
       CrossSection previousCrossSection;
       if (crossIdx == 0) {
@@ -279,12 +276,8 @@ Mesh Tree::generateMesh() const {
           matchingIdx++;
         }
 
-        std::cout << "Connecting strandId: " << strandId << " at current index: " << i
-                  << " with previous index: " << matchingVertex << std::endl;
-
+        // @TODO: handle the case of strand not present in the previous cross section boundary
         if (matchingVertex == -1) {
-          std::cerr << "Error: could not find corresponding strandId in previous cross section"
-                    << std::endl;
           continue;
         }
 
