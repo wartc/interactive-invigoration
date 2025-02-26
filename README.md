@@ -2,6 +2,12 @@
 
 This repository contains an implementation of the paper **"Interactive Invigoration: Volumetric Modeling of Trees with Strands"** by Li et al. (2024). Specifically, the project focuses on the core idea of strand-based volumetric modeling for trees, including strand calculation, Position-Based Dynamics (PBD) for strand packing, and mesh generation from strands.
 
+<p align="center">
+  <img alt="Generated tree strands" src="https://github.com/user-attachments/assets/c441e56e-8bff-46d5-bfb1-a4db9bd8a7be" width="45%">
+&nbsp; &nbsp; &nbsp; &nbsp;
+  <img alt="Strands generated with low-tension splines" src="https://github.com/user-attachments/assets/e037757d-4a66-4fca-b9ea-8e22ab7023ba" width="45%">
+</p>
+
 While not all features of the paper are fully implemented, the core functionality for strand propagation, collision resolution, and basic mesh generation is present.
 
 ## Implementation Status
@@ -21,13 +27,14 @@ This implementation focuses on the core components of the paper:
 
 ### Dependencies
 
-The following packages must be installed on your system:
+The following packages
+ must be installed on your system:
 
 - **GLFW 3.3+**
 - **GLM**
 - **CGAL** (Computational Geometry Algorithms Library) - for Delaunay triangulation and least-squares fitting
 
-**\*GLAD** is already included in `external/glad` - no installation needed\*
+***GLAD** is already included in `external/glad` - no installation needed*
 
 ### Build Instructions
 
